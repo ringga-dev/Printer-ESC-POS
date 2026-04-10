@@ -3,24 +3,28 @@ package ngga.ring.printer.manager
 import ngga.ring.printer.model.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.*
 import platform.CoreBluetooth.*
 import platform.Foundation.*
 import platform.darwin.NSObject
 import kotlinx.cinterop.*
 import platform.posix.memcpy
+import kotlin.coroutines.resume
 
 /**
  * iOS Implementation for Bluetooth Low Energy (BLE).
- * Re-designed for high reliability with strong references and state management.
+ * Re-designed with a Delegate Pattern to avoid "Mixing Kotlin and Objective-C supertypes" errors.
  */
-class IosBluetoothConnector : NSObject(), PrinterConnector, CBCentralManagerDelegateProtocol, CBPeripheralDelegateProtocol {
+@OptIn(ExperimentalForeignApi::class)
+class IosBluetoothConnector : PrinterConnector {
     private var centralManager: CBCentralManager? = null
     private var connectedPeripheral: CBPeripheral? = null
     private var writeCharacteristic: CBCharacteristic? = null
     private var continuation: CancellableContinuation<Boolean>? = null
     
-    // Hold strong reference to avoid GC during connection
+    // Hold strong reference to avoid GC
     private var targetUUID: NSUUID? = null
+    private val bleDelegate = BleDelegate()
 
     // Standard UUIDs for Thermal Printers
     private val SERVICE_UUID = CBUUID.UUIDWithString("FF00")
@@ -36,9 +40,8 @@ class IosBluetoothConnector : NSObject(), PrinterConnector, CBCentralManagerDele
         this.targetUUID = NSUUID(uUIDString = config.address)
         
         if (centralManager == null) {
-            centralManager = CBCentralManager(delegate = this, queue = null)
+            centralManager = CBCentralManager(delegate = bleDelegate, queue = null)
         } else {
-            // Already initialized, try to connect if state is On
             if (centralManager?.state == CBManagerStatePoweredOn) {
                 initiateConnection()
             }
@@ -52,10 +55,9 @@ class IosBluetoothConnector : NSObject(), PrinterConnector, CBCentralManagerDele
         
         if (peripheral != null) {
             connectedPeripheral = peripheral
-            peripheral.delegate = this
+            peripheral.delegate = bleDelegate
             centralManager?.connectPeripheral(peripheral, options = null)
         } else {
-            // If not found in cache, we scan briefly
             centralManager?.scanForPeripheralsWithServices(null, null)
         }
     }
@@ -68,7 +70,6 @@ class IosBluetoothConnector : NSObject(), PrinterConnector, CBCentralManagerDele
             NSData.create(bytes = pinned.addressOf(0), length = data.size.toULong())
         }
         
-        // Write without response is faster and standard for thermal printers
         peripheral.writeValue(nsData, forCharacteristic = char, type = CBCharacteristicWriteWithoutResponse)
         true
     }
@@ -82,69 +83,59 @@ class IosBluetoothConnector : NSObject(), PrinterConnector, CBCentralManagerDele
 
     override fun isConnected(): Boolean = connectedPeripheral != null && writeCharacteristic != null
 
-    /* ------------------------------------------------------------
-     * CBCentralManagerDelegate
-     * ------------------------------------------------------------ */
-
-    override fun centralManagerDidUpdateState(central: CBCentralManager) {
-        when (central.state) {
-            CBManagerStatePoweredOn -> initiateConnection()
-            CBManagerStatePoweredOff -> {
+    /**
+     * Internal Delegate to handle Objective-C CoreBluetooth events.
+     */
+    private inner class BleDelegate : NSObject(), CBCentralManagerDelegateProtocol, CBPeripheralDelegateProtocol {
+        override fun centralManagerDidUpdateState(central: CBCentralManager) {
+            if (central.state == CBManagerStatePoweredOn) {
+                initiateConnection()
+            } else if (central.state == CBManagerStatePoweredOff) {
                 continuation?.resume(false)
                 continuation = null
             }
-            else -> {}
         }
-    }
 
-    override fun centralManager(central: CBCentralManager, didConnectPeripheral: CBPeripheral) {
-        didConnectPeripheral.discoverServices(listOf(SERVICE_UUID))
-    }
+        override fun centralManager(central: CBCentralManager, didConnectPeripheral: CBPeripheral) {
+            didConnectPeripheral.discoverServices(listOf(SERVICE_UUID))
+        }
 
-    override fun centralManager(central: CBCentralManager, didFailToConnectPeripheral: CBPeripheral, error: NSError?) {
-        continuation?.resume(false)
-        continuation = null
-    }
+        override fun centralManager(central: CBCentralManager, didFailToConnectPeripheral: CBPeripheral, error: NSError?) {
+            continuation?.resume(false)
+            continuation = null
+        }
 
-    /* ------------------------------------------------------------
-     * CBPeripheralDelegate
-     * ------------------------------------------------------------ */
-
-    override fun peripheral(peripheral: CBPeripheral, didDiscoverServices: NSError?) {
-        val service = peripheral.services?.firstOrNull { 
-            (it as CBService).UUID == SERVICE_UUID 
-        } as? CBService
-        
-        if (service != null) {
-            peripheral.discoverCharacteristics(listOf(WRITE_UUID), forService = service)
-        } else {
-            // Try generic discovery if specific service not found
-            peripheral.services?.firstOrNull()?.let { 
-                peripheral.discoverCharacteristics(null, forService = it as CBService)
+        override fun peripheral(peripheral: CBPeripheral, didDiscoverServices: NSError?) {
+            val service = (peripheral.services ?: emptyList<Any?>()).firstOrNull { 
+                (it as? CBService)?.UUID == SERVICE_UUID 
+            } as? CBService
+            
+            if (service != null) {
+                peripheral.discoverCharacteristics(listOf(WRITE_UUID), forService = service)
+            } else {
+                (peripheral.services ?: emptyList<Any?>()).firstOrNull()?.let { 
+                    peripheral.discoverCharacteristics(null, forService = it as CBService)
+                }
             }
         }
-    }
 
-    override fun peripheral(peripheral: CBPeripheral, didDiscoverCharacteristicsForService: CBService, error: NSError?) {
-        val char = didDiscoverCharacteristicsForService.characteristics?.firstOrNull {
-            (it as CBCharacteristic).UUID == WRITE_UUID
-        } as? CBCharacteristic
-        
-        writeCharacteristic = char ?: didDiscoverCharacteristicsForService.characteristics?.firstOrNull() as? CBCharacteristic
-        
-        if (writeCharacteristic != null) {
-            continuation?.resume(true)
-        } else {
-            continuation?.resume(false)
+        override fun peripheral(peripheral: CBPeripheral, didDiscoverCharacteristicsForService: CBService, error: NSError?) {
+            val char = (didDiscoverCharacteristicsForService.characteristics ?: emptyList<Any?>()).firstOrNull {
+                (it as? CBCharacteristic)?.UUID == WRITE_UUID
+            } as? CBCharacteristic
+            
+            writeCharacteristic = char ?: (didDiscoverCharacteristicsForService.characteristics ?: emptyList<Any?>()).firstOrNull() as? CBCharacteristic
+            
+            if (writeCharacteristic != null) {
+                continuation?.resume(true)
+            } else {
+                continuation?.resume(false)
+            }
+            continuation = null
         }
-        continuation = null
     }
 }
 
-/**
- * iOS Implementation for Network (TCP).
- * Placeholder for future refinement.
- */
 class IosNetworkConnector : PrinterConnector {
     override suspend fun connect(config: PrinterConfig): Boolean = false
     override suspend fun sendData(data: ByteArray): Boolean = false
@@ -152,9 +143,9 @@ class IosNetworkConnector : PrinterConnector {
     override fun isConnected(): Boolean = false
 }
 
+@OptIn(ExperimentalForeignApi::class)
 actual class PrinterConnectorFactory {
     actual constructor()
-
     actual fun create(config: PrinterConfig): PrinterConnector {
         return when (config.connectionType) {
             "BLUETOOTH", "BLUETOOTH_LE" -> IosBluetoothConnector()
@@ -178,7 +169,7 @@ actual class PrinterConnectorFactory {
 
         if (config.showVirtualDevices) {
             discoveredDevices.add(DiscoveredPrinter("[VIRTUAL] $type iOS Printer", type, if(type == "NETWORK") "192.168.1.102" else "UUID-IOS-TEST-1234"))
-            send(discoveredDevices.toList())
+            trySend(discoveredDevices.toList())
         }
 
         if (type == "BLUETOOTH" || type == "BLUETOOTH_LE") {
@@ -186,7 +177,7 @@ actual class PrinterConnectorFactory {
                 override fun centralManagerDidUpdateState(central: CBCentralManager) {
                     if (central.state == CBManagerStatePoweredOn) {
                         central.scanForPeripheralsWithServices(null, null)
-                    } else {
+                    } else if (central.state == CBManagerStatePoweredOff) {
                         onLog("Bluetooth is OFF")
                     }
                 }
@@ -197,13 +188,12 @@ actual class PrinterConnectorFactory {
                     
                     if (discoveredDevices.none { it.address == address }) {
                         discoveredDevices.add(DiscoveredPrinter(name, "BLUETOOTH_LE", address))
-                        launch { send(discoveredDevices.toList()) }
+                        trySend(discoveredDevices.toList())
                     }
                 }
             }
             
             val centralManager = CBCentralManager(delegate = delegate, queue = null)
-            
             awaitClose {
                 centralManager.stopScan()
             }

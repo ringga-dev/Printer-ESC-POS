@@ -61,14 +61,18 @@ actual class PrinterConnectorFactory {
         }
     }
 
-    actual suspend fun discovery(
+    actual fun discovery(
         type: String, 
+        config: ngga.ring.printer.model.DiscoveryConfig,
         onLog: (String) -> Unit
     ): Flow<List<DiscoveredPrinter>> = flow {
         onLog("Discovery started on JVM for $type...")
-        val virtualList = listOf(
-            DiscoveredPrinter("[VIRTUAL] $type JVM Printer", type, if(type == "NETWORK") "192.168.1.103" else "COM1-VIRTUAL")
-        )
-        emit(virtualList)
+        val discoveredDevices = mutableListOf<DiscoveredPrinter>()
+
+        if (config.showVirtualDevices) {
+            discoveredDevices.add(DiscoveredPrinter("[VIRTUAL] $type JVM Printer", type, if(type == "NETWORK") "192.168.1.103" else "COM1-VIRTUAL"))
+        }
+
+        emit(discoveredDevices.toList())
     }
 }

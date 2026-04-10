@@ -205,25 +205,29 @@ actual class PrinterConnectorFactory {
     }
 
     private fun bluetoothDiscovery(onLog: (String) -> Unit): Flow<List<DiscoveredPrinter>> = callbackFlow {
+        android.util.Log.d("NggaPrinter", "Bluetooth discovery flow started")
         val adapter = BluetoothAdapter.getDefaultAdapter()
-        val discoveredDevices = mutableSetOf<DiscoveredPrinter>()
+        val discoveredDevices = Collections.synchronizedSet(mutableSetOf<DiscoveredPrinter>())
 
         onLog("Starting Bluetooth discovery...")
-        // Add virtual device for UI verification
+        
+        // Add virtual device for UI verification immediately
         discoveredDevices.add(DiscoveredPrinter("[VIRTUAL] Bluetooth Android", "BLUETOOTH", "00:AA:BB:CC:DD:EE"))
-        trySend(discoveredDevices.toList())
+        android.util.Log.d("NggaPrinter", "Emitting virtual device")
+        launch { send(discoveredDevices.toList()) }
 
         if (adapter == null) {
-            onLog("Error: Bluetooth adapter not available on this device")
+            onLog("Error: Bluetooth adapter not available")
+            android.util.Log.e("NggaPrinter", "Bluetooth adapter is NULL")
             close()
             return@callbackFlow
         }
 
         if (!adapter.isEnabled) {
-            onLog("Warning: Bluetooth is disabled. Please enable it.")
+            onLog("Warning: Bluetooth is disabled.")
         }
 
-        // 1. Point bonded devices first
+        // 1. Bonded devices
         val bonded = adapter.bondedDevices
         onLog("Checking ${bonded?.size ?: 0} paired devices...")
         bonded?.forEach { device ->
@@ -232,7 +236,7 @@ actual class PrinterConnectorFactory {
                 connectionType = "BLUETOOTH",
                 address = device.address
             ))
-            trySend(discoveredDevices.toList())
+            launch { send(discoveredDevices.toList()) }
         }
 
         // 2. Scan for new devices
@@ -242,13 +246,13 @@ actual class PrinterConnectorFactory {
                     BluetoothDevice.ACTION_FOUND -> {
                         val device: BluetoothDevice? = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
                         device?.let {
-                            onLog("Found: ${it.name ?: "Unnamed device"}")
+                            onLog("Found: ${it.name ?: "Unnamed"}")
                             discoveredDevices.add(DiscoveredPrinter(
                                 name = it.name ?: "Unknown Device",
                                 connectionType = "BLUETOOTH",
                                 address = it.address
                             ))
-                            trySend(discoveredDevices.toList())
+                            launch { send(discoveredDevices.toList()) }
                         }
                     }
                     BluetoothAdapter.ACTION_DISCOVERY_STARTED -> onLog("Scanning for new devices...")
@@ -264,7 +268,7 @@ actual class PrinterConnectorFactory {
                 addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
             })
             val started = adapter.startDiscovery()
-            if (!started) onLog("Scan failed to start (Check Runtime Permissions!)")
+            if (!started) onLog("Scan failed to start (Check GPS/Location!)")
         } catch (e: Exception) {
             onLog("Error: ${e.message}")
         }
@@ -301,11 +305,15 @@ actual class PrinterConnectorFactory {
     private fun networkDiscovery(onLog: (String) -> Unit): Flow<List<DiscoveredPrinter>> = kotlinx.coroutines.flow.channelFlow {
         onLog("Searching Wi-Fi subnet (Port 9100)...")
         val discovered = mutableListOf<DiscoveredPrinter>()
+        
+        // Brief delay to ensure UI is ready to receive
+        kotlinx.coroutines.delay(100)
+        
         discovered.add(DiscoveredPrinter("[VIRTUAL] Network Android Printer", "NETWORK", "192.168.1.101", port = 9100))
         send(discovered.toList())
         
         try {
-            val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+            val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
             val ipAddress = wifiManager.connectionInfo.ipAddress
             
             if (ipAddress == 0) {

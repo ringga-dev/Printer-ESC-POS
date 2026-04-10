@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -22,7 +23,8 @@ import kotlinx.coroutines.launch
 import ngga.ring.printer.NggaPrinter
 import ngga.ring.printer.model.*
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.datetime.Clock
+import ngga.ring.printer.manager.PrinterPermissionManager
+import kotlin.time.Clock
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,17 +41,25 @@ fun App() {
     
     // UI State
     var selectedTab by remember { mutableStateOf(0) }
-    val discoveredPrinters = remember { mutableStateListOf<DiscoveredPrinter>() }
+    var discoveredPrinters by remember { mutableStateOf(emptyList<DiscoveredPrinter>()) }
     var discoveryLog by remember { mutableStateOf("Ready to scan...") }
+    var discoveryMode by remember { mutableStateOf("BLUETOOTH") }
+    var refreshScanTrigger by remember { mutableStateOf(0) }
+    
+    // Permission State
+    val permissionManager = remember { PrinterPermissionManager() }
+    var hasBluetoothPermission by remember { mutableStateOf(permissionManager.hasPermissions("BLUETOOTH")) }
     
     // Start Discovery Effect
-    LaunchedEffect(selectedTab) {
-        if (selectedTab == 0) {
-            printer.connectorFactory.discovery("BLUETOOTH") { log ->
+    LaunchedEffect(selectedTab, discoveryMode, hasBluetoothPermission, refreshScanTrigger) {
+        if (selectedTab == 0 && (discoveryMode != "BLUETOOTH" || hasBluetoothPermission)) {
+            discoveryLog = "Preparing $discoveryMode scan..."
+            println("NggaPrinter: Starting scan for $discoveryMode (Trigger: $refreshScanTrigger)")
+            printer.connectorFactory.discovery(discoveryMode) { log ->
                 discoveryLog = log
             }.collectLatest { devices ->
-                discoveredPrinters.clear()
-                discoveredPrinters.addAll(devices)
+                println("NggaPrinter: Observed ${devices.size} devices for $discoveryMode")
+                discoveredPrinters = devices
             }
         }
     }
@@ -79,13 +89,13 @@ fun App() {
                     NavigationBarItem(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
-                        icon = { Icon(Icons.Default.SettingsInputAntenna, null) },
-                        label = { Text("Discovery") }
+                        icon = { Icon(Icons.Default.Search, null) },
+                        label = { Text("Search") }
                     )
                     NavigationBarItem(
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 },
-                        icon = { Icon(Icons.Default.Receipt, null) },
+                        icon = { Icon(Icons.Default.Print, null) },
                         label = { Text("Studio") }
                     )
                     NavigationBarItem(
@@ -107,10 +117,24 @@ fun App() {
                         )
                     )
             ) {
-                AnimatedContent(targetState = selectedTab) { tab ->
-                    when (tab) {
-                        0 -> DiscoveryScreen(discoveredPrinters, discoveryLog, printerConfig) { 
-                            printerConfig = it 
+                // Simplified render without AnimatedContent
+                Box(Modifier.fillMaxSize()) {
+                    when (selectedTab) {
+                        0 -> {
+                            if (discoveryMode == "BLUETOOTH" && !hasBluetoothPermission) {
+                                PermissionGate(onGranted = { hasBluetoothPermission = true })
+                            } else {
+                                DiscoveryScreen(
+                                    devices = discoveredPrinters, 
+                                    log = discoveryLog, 
+                                    selected = printerConfig,
+                                    currentMode = discoveryMode,
+                                    onModeChange = { discoveryMode = it },
+                                    onRefresh = { refreshScanTrigger++ }
+                                ) { 
+                                    printerConfig = it 
+                                }
+                            }
                         }
                         1 -> ReceiptScreen(printer, printerConfig, paperWidth, cpl, scope)
                         2 -> ConfigScreen(paperWidth, cpl, onUpdateWidth = { paperWidth = it }, onUpdateCpl = { cpl = it })
@@ -126,29 +150,121 @@ fun DiscoveryScreen(
     devices: List<DiscoveredPrinter>,
     log: String,
     selected: PrinterConfig,
+    currentMode: String,
+    onModeChange: (String) -> Unit,
+    onRefresh: () -> Unit,
     onSelect: (PrinterConfig) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         HeaderSection("Printer Discovery", "Search for Bluetooth, USB, or Network printers")
         
+        Spacer(Modifier.height(16.dp))
+        
+        // Protocol Selector
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf("BLUETOOTH", "USB", "NETWORK").forEach { mode ->
+                FilterChip(
+                    selected = currentMode == mode,
+                    onClick = { onModeChange(mode) },
+                    label = { Text(mode, fontSize = 11.sp) },
+                    leadingIcon = {
+                        Icon(
+                            when(mode) {
+                                "NETWORK" -> Icons.Default.Router
+                                "USB" -> Icons.Default.SettingsEthernet
+                                else -> Icons.Default.Bluetooth
+                            },
+                             null,
+                             modifier = Modifier.size(16.dp)
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                        selectedLabelColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            }
+        }
+
         Spacer(Modifier.height(12.dp))
         
         Surface(
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)),
             color = Color.Black.copy(alpha = 0.3f)
         ) {
-            Text(
-                text = log,
+            Row(
                 modifier = Modifier.padding(12.dp),
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.primary,
-                maxLines = 1
-            )
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (log.contains("Scanning") || log.contains("Starting") || log.contains("Checking")) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(12.dp))
+                }
+                Text(
+                    text = log,
+                    modifier = Modifier.weight(1f),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1
+                )
+                Text(
+                    text = "${devices.size} found",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                )
+            }
         }
         
+        Spacer(Modifier.height(8.dp))
+        
+        Button(
+            onClick = onRefresh,
+            modifier = Modifier.fillMaxWidth().height(44.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+        ) {
+            Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(12.dp))
+            Text("SCAN FOR PRINTERS", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        }
+
         Spacer(Modifier.height(16.dp))
         
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Diagnostic Item: Always show this to prove the list is working
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().alpha(0.6f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.DarkGray.copy(alpha = 0.2f))
+                ) {
+                    Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Info, null, modifier = Modifier.size(14.dp), tint = Color.Gray)
+                        Spacer(Modifier.width(10.dp))
+                        Text("Discovery active: Monitoring hardware ports", fontSize = 10.sp, color = Color.Gray)
+                    }
+                }
+            }
+
+            if (devices.isEmpty()) {
+                item {
+                    Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.AutoMode, null, modifier = Modifier.size(64.dp), tint = Color.Gray.copy(alpha = 0.3f))
+                            Spacer(Modifier.height(16.dp))
+                            Text("No $currentMode detected", color = Color.Gray, fontSize = 14.sp)
+                        }
+                    }
+                }
+            }
+
             items(devices) { device ->
                 val isSelected = selected.address == device.address
                 Card(
@@ -169,26 +285,26 @@ fun DiscoveryScreen(
                     ) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                         ) {
                             Icon(
                                 when(device.connectionType) {
-                                    "NETWORK" -> Icons.Default.NetworkPing
-                                    "USB" -> Icons.Default.Usb
+                                    "NETWORK" -> Icons.Default.Router
+                                    "USB" -> Icons.Default.SettingsEthernet
                                     else -> Icons.Default.Bluetooth
                                 }, 
-                                contentDescription = null, 
+                                null,
                                 modifier = Modifier.padding(12.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
-                        Spacer(Modifier.width(16.dp))
+                        Spacer(Modifier.width(20.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(device.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Text(device.address, color = LocalContentColor.current.copy(alpha = 0.6f), fontSize = 12.sp)
+                            Text(device.address, color = LocalContentColor.current.copy(alpha = 0.6f), fontSize = 13.sp)
                         }
                         if (isSelected) {
-                            Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary)
+                            Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -205,14 +321,23 @@ fun ReceiptScreen(
     cpl: Int, 
     scope: kotlinx.coroutines.CoroutineScope
 ) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        HeaderSection("Receipt Studio", "Live simulation for ${width}mm paper")
+    var printStatus by remember { mutableStateOf<PrintStatus>(PrintStatus.Idle) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            HeaderSection("Receipt Studio", "Live simulation for ${width}mm paper")
         
         Spacer(Modifier.height(24.dp))
         
-        // Simulated Preview
+        // Simulated Preview (Width dynamic based on selection)
+        val previewPadding = when(width) {
+            58 -> 48.dp
+            72 -> 24.dp
+            else -> 0.dp
+        }
+
         Card(
-            modifier = Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(16.dp)),
+            modifier = Modifier.padding(horizontal = previewPadding).fillMaxWidth().weight(1f).clip(RoundedCornerShape(16.dp)),
             colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
             Column(
@@ -234,7 +359,7 @@ fun ReceiptScreen(
                     }
                 }
                 Spacer(Modifier.height(24.dp))
-                Divider(color = Color.LightGray)
+                HorizontalDivider(color = Color.LightGray)
                 Spacer(Modifier.height(8.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("TOTAL AMOUNT", color = Color.Black, fontWeight = FontWeight.Bold)
@@ -249,34 +374,112 @@ fun ReceiptScreen(
         Spacer(Modifier.height(16.dp))
         
         val isReady = !config.address.isNullOrEmpty()
-        Button(
-            enabled = isReady,
-            onClick = {
-                scope.launch {
-                    val business = BusinessInfo("NggaPrinter Pro", "Professional HQ", "v1.0.0", currencySymbol = "$")
-                    val data = ReceiptData(
-                        headerId = "INV-FINAL",
-                        transactionId = "TX-PROFESSIONAL",
-                        timestamp = Clock.System.now().toEpochMilliseconds(),
-                        items = listOf(ReceiptItem("Professional SDK", 1.0, 100.0)),
-                        totalAmount = 100.0,
-                        verificationUrl = "https://github.com/ringga-dev/Printer-ESC-POS"
-                    )
-                    printer.printReceipt(config, business, data)
-                }
-            },
-            modifier = Modifier.fillMaxWidth().height(60.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.secondary,
-                disabledContainerColor = Color.Gray.copy(alpha = 0.3f)
-            )
-        ) {
-            Icon(Icons.Default.AutoFixHigh, null)
+        Row(Modifier.fillMaxWidth()) {
+            Button(
+                enabled = isReady,
+                onClick = {
+                    scope.launch {
+                        printer.printTestPage(config, cpl).collect {status ->
+                            printStatus = status
+                        }
+                    }
+                },
+                modifier = Modifier.weight(1f).height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+            ) {
+                Icon(Icons.Default.Print, null)
+                Spacer(Modifier.width(12.dp))
+                Text("Print Receipt", fontWeight = FontWeight.Bold)
+            }
+
             Spacer(Modifier.width(12.dp))
-            Text(if (isReady) "Execute Print to ${config.name}" else "Select a Printer First", fontWeight = FontWeight.Bold)
+
+            // Advanced Test Print Button
+            OutlinedButton(
+                enabled = isReady,
+                onClick = {
+                    scope.launch {
+                        printer.printTestPage(config, cpl).collect { status ->
+                            printStatus = status
+                        }
+                    }
+                },
+                modifier = Modifier.height(56.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(Icons.Default.History, null)
+            }
         }
     }
+
+    // Status Overlay
+    if (printStatus !is PrintStatus.Idle) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier.padding(32.dp).fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    modifier = Modifier.padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    when (printStatus) {
+                        PrintStatus.Processing -> {
+                            CircularProgressIndicator(modifier = Modifier.size(48.dp))
+                            Spacer(Modifier.height(16.dp))
+                            Text("Processing...", fontWeight = FontWeight.Bold)
+                            Text("Generating receipt layout", fontSize = 12.sp, color = Color.Gray)
+                        }
+                        PrintStatus.Connecting -> {
+                            CircularProgressIndicator(modifier = Modifier.size(48.dp))
+                            Spacer(Modifier.height(16.dp))
+                            Text("Connecting...", fontWeight = FontWeight.Bold)
+                            Text("Establishing link with ${config.name}", fontSize = 12.sp, color = Color.Gray)
+                        }
+                        PrintStatus.Sending -> {
+                            CircularProgressIndicator(modifier = Modifier.size(48.dp), color = MaterialTheme.colorScheme.secondary)
+                            Spacer(Modifier.height(16.dp))
+                            Text("Printing...", fontWeight = FontWeight.Bold)
+                            Text("Transmitting ESC/POS commands", fontSize = 12.sp, color = Color.Gray)
+                        }
+                        PrintStatus.Success -> {
+                            Text("✅", fontSize = 48.sp)
+                            Spacer(Modifier.height(16.dp))
+                            Text("Print Successful!", fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(24.dp))
+                            Button(
+                                onClick = { printStatus = PrintStatus.Idle },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Done")
+                            }
+                        }
+                        is PrintStatus.Error -> {
+                            Text("❌", fontSize = 48.sp)
+                            Spacer(Modifier.height(16.dp))
+                            Text("Print Failed", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                            Text((printStatus as PrintStatus.Error).message, fontSize = 12.sp, color = Color.Gray, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            Spacer(Modifier.height(24.dp))
+                            Button(
+                                onClick = { printStatus = PrintStatus.Idle },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                            ) {
+                                Text("Back")
+                            }
+                        }
+                        else -> {}
+                    }
+                }
+            }
+        }
+    }
+}
 }
 
 @Composable
@@ -286,13 +489,21 @@ fun ConfigScreen(width: Int, cpl: Int, onUpdateWidth: (Int) -> Unit, onUpdateCpl
         
         Spacer(Modifier.height(24.dp))
         
-        Text("Paper Width", fontWeight = FontWeight.Bold, color = Color.White)
-        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            listOf(58, 80).forEach { w ->
+        Text("Select Paper Variant", fontWeight = FontWeight.Bold, color = Color.White)
+        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            listOf(58, 72, 80).forEach { w ->
+                val isSelected = width == w
                 FilterChip(
-                    selected = width == w,
-                    onClick = { onUpdateWidth(w) },
-                    label = { Text("${w}mm") }
+                    selected = isSelected,
+                    onClick = { 
+                        onUpdateWidth(w)
+                        // Auto-adjust CPL for convenience
+                        onUpdateCpl(if (w == 58) 32 else if (w == 72) 38 else 42)
+                    },
+                    label = { Text("${w}mm", modifier = Modifier.padding(horizontal = 8.dp)) },
+                    leadingIcon = {
+                        if (isSelected) Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
+                    }
                 )
             }
         }
@@ -312,14 +523,46 @@ fun ConfigScreen(width: Int, cpl: Int, onUpdateWidth: (Int) -> Unit, onUpdateCpl
         
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surface
         ) {
-            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(12.dp))
-                Text("Standard 58mm usually uses 32 CPL. 80mm uses 42-48 CPL.", fontSize = 12.sp, color = LocalContentColor.current.copy(alpha = 0.7f))
+            Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Help, null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(16.dp))
+                Text("CPL determines how many characters fit in one line. Standard 58mm uses 32 CPL, while 80mm uses 42-48 CPL.", fontSize = 12.sp, color = LocalContentColor.current.copy(alpha = 0.8f))
             }
+        }
+    }
+}
+
+@Composable
+fun PermissionGate(onGranted: () -> Unit) {
+    val permissionManager = remember { PrinterPermissionManager() }
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(Icons.Default.Lock, null, modifier = Modifier.size(80.dp), tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.height(24.dp))
+        Text("Permissions Required", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Bluetooth and Location permissions are needed to discover nearby thermal printers.",
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            color = Color.Gray
+        )
+        Spacer(Modifier.height(32.dp))
+        Button(
+            onClick = {
+                permissionManager.requestPermissions("BLUETOOTH") { granted ->
+                    if (granted) onGranted()
+                }
+            },
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Text("Grant Permissions", fontWeight = FontWeight.Bold)
         }
     }
 }

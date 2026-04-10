@@ -5,6 +5,9 @@ import ngga.ring.printer.manager.PrinterConnectorFactory
 import ngga.ring.printer.model.PrinterConfig
 import ngga.ring.printer.model.ReceiptData
 import ngga.ring.printer.model.BusinessInfo
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import ngga.ring.printer.model.PrintStatus
 
 /**
  * The "Satu Pintu" (Single Entry Point) for the printer library.
@@ -38,14 +41,16 @@ class NggaPrinter {
      * @param role The template role (Default: "KASIR").
      * @return true if the print job was successfully transmitted.
      */
-    suspend fun printReceipt(
+    fun printReceipt(
         config: PrinterConfig,
-        business: BusinessInfo?,
-        data: ReceiptData,
-        role: String = "KASIR"
-    ): Boolean {
-        val bytes = receiptService.generateReceipt(business, data, role)
-        return printRaw(config, bytes)
+        data: ByteArray,
+    ): Flow<PrintStatus> = flow {
+        emit(PrintStatus.Processing)
+        
+        // Delegate to printRaw and collect its emissions
+        printRaw(config, data).collect { status ->
+            emit(status)
+        }
     }
 
     /**
@@ -55,24 +60,42 @@ class NggaPrinter {
      * @param config The target printer configuration.
      * @param data The raw byte array to send.
      */
-    suspend fun printRaw(config: PrinterConfig, data: ByteArray): Boolean {
+    fun printRaw(config: PrinterConfig, data: ByteArray): Flow<PrintStatus> = flow {
         val connector = activeConnector ?: connectorFactory.create(config)
         
         try {
             if (!connector.isConnected()) {
+                emit(PrintStatus.Connecting)
                 val success = connector.connect(config)
-                if (!success) return false
+                if (!success) {
+                    emit(PrintStatus.Error("Failed to connect to printer"))
+                    return@flow
+                }
             }
             
+            emit(PrintStatus.Sending)
             val sent = connector.sendData(data)
             
-            // For one-off print jobs, we might want to disconnect. 
-            // In a professional POS app, users usually keep the connection alive.
-            // connector.disconnect() 
-            
-            return sent
+            if (sent) {
+                emit(PrintStatus.Success)
+            } else {
+                emit(PrintStatus.Error("Failed to send data to printer"))
+            }
+
         } catch (e: Exception) {
-            return false
+            emit(PrintStatus.Error(e.message ?: "Unknown print error"))
+        }
+    }
+
+    /**
+     * Prints a professional hardware test page containing styles, barcodes, and QR codes.
+     */
+    fun printTestPage(config: PrinterConfig, cpl: Int = 32): Flow<PrintStatus> = flow {
+        emit(PrintStatus.Processing)
+        val bytes = receiptService.generateTestPrint(cpl)
+        
+        printRaw(config, bytes).collect { status ->
+            emit(status)
         }
     }
 

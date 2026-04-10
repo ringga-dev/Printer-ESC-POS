@@ -25,7 +25,7 @@ jobs:
           VERSION=$(grep 'LIB_VERSION=' gradle.properties | cut -d'=' -f2)
           echo "LIB_VERSION=$VERSION" >> $GITHUB_OUTPUT
 
-  # 2. Build Android AAR (Critical)
+  # 2. Build Android AAR
   build-android:
     name: Build Android
     needs: setup
@@ -47,7 +47,7 @@ jobs:
           name: nggaprinter-aar
           path: printer/build/outputs/aar/printer-release.aar
 
-  # 3. Build iOS XCFramework (Critical)
+  # 3. Build iOS XCFramework
   build-ios:
     name: Build iOS
     needs: setup
@@ -73,7 +73,29 @@ jobs:
           name: nggaprinter-xcframework
           path: NggaPrinter.xcframework.zip
 
-  # 4. GitHub Channel: Maven Repo Branch (Self-Hosted)
+  # 4. Build JVM JAR (Desktop)
+  build-jvm:
+    name: Build JVM
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      - name: Build JVM Jar
+        run: ./gradlew :printer:jvmJar --no-daemon
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nggaprinter-jvm
+          path: printer/build/libs/printer-jvm-*.jar
+
+  # 5. GitHub Channel: Maven Repo Branch
   publish-github-maven:
     name: Publish to GitHub Repo
     needs: setup
@@ -100,8 +122,7 @@ jobs:
           user_email: 'github-actions[bot]@users.noreply.github.com'
           commit_message: "Publish version ${{ needs.setup.outputs.lib_version }}"
 
-  # 5. Sonatype Central Channel: Bundle Preparation
-  # This job is independent and uses "continue-on-error" to never block GitHub Releases
+  # 6. Sonatype Central Channel: Bundle Preparation
   publish-sonatype-bundle:
     name: Create Sonatype Bundle
     needs: setup
@@ -131,12 +152,11 @@ jobs:
           name: sonatype-central-bundle
           path: SonatypeCentralBundle.zip
 
-  # 6. Final: Create GitHub Release
-  # Dependent only on Build success, NOT on Sonatype
+  # 7. Final: Create GitHub Release
   create-release:
     name: Create GitHub Release
-    needs: [setup, build-android, build-ios]
-    if: startsWith(github.ref, 'refs/tags/v') && needs.setup.result == 'success'
+    needs: [setup, build-android, build-ios, build-jvm]
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - name: Download Artifacts
@@ -150,6 +170,7 @@ jobs:
           files: |
             release_artifacts/nggaprinter-aar/*
             release_artifacts/nggaprinter-xcframework/*
+            release_artifacts/nggaprinter-jvm/*
             release_artifacts/sonatype-central-bundle/*
           name: Release ${{ needs.setup.outputs.lib_version }}
           body: |
@@ -158,6 +179,7 @@ jobs:
             ### Compiled Binaries
             - **Android**: `printer-release.aar`
             - **iOS**: `NggaPrinter.xcframework.zip`
+            - **JVM (Desktop)**: `printer-jvm-*.jar`
             
             ### 🚀 Distribution
             

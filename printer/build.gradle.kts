@@ -1,14 +1,10 @@
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidLibrary)
+    kotlin("multiplatform")
+    id("com.android.library")
 }
 
 kotlin {
-    androidTarget {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        }
-    }
+    androidTarget()
     
     listOf(
         iosArm64(),
@@ -20,44 +16,36 @@ kotlin {
         }
     }
     
-    jvm {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        }
-    }
+    jvm()
     
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":core"))
-            implementation(project(":data"))
-            
-            implementation(libs.kotlinx.coroutines.core)
-            implementation(libs.kotlinx.datetime)
-            api(libs.koin.core)
-            implementation(libs.napier)
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
+            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
+            implementation("io.github.aakira:napier:2.7.1")
         }
 
         androidMain.dependencies {
-            implementation(libs.appcompat)
-            implementation(libs.material)
+            implementation("androidx.appcompat:appcompat:1.7.0")
+            implementation("com.google.android.material:material:1.12.0")
         }
         
         jvmMain.dependencies {
-            implementation(libs.jserialcomm)
-            implementation(libs.jna)
-            implementation(libs.jna.platform)
+            implementation("com.fazecast:jSerialComm:2.11.0")
+            implementation("net.java.dev.jna:jna:5.14.0")
+            implementation("net.java.dev.jna:jna-platform:5.14.0")
         }
     }
 }
 
 android {
     namespace = "ngga.ring.printer"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    compileSdk = 37
     defaultConfig {
-        minSdk = libs.versions.android.minSdk.get().toInt()
+        minSdk = 24
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 }

@@ -22,7 +22,7 @@ actual class PrinterConnectorFactory {
         onLog: (String) -> Unit
     ): Flow<List<DiscoveredPrinter>> {
         return flow {
-            onLog("Discovery not yet implemented for JVM")
+            onLog("Discovery not yet implemented for iOS")
             emit(emptyList<DiscoveredPrinter>())
         }
     }

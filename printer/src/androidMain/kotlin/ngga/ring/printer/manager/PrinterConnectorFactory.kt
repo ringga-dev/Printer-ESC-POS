@@ -13,8 +13,8 @@ import android.hardware.usb.UsbEndpoint
 import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
 import android.hardware.usb.UsbDevice
-import ngga.ring.data.model.PrinterConfigEntity
-import ngga.ring.data.model.DiscoveredPrinter
+import ngga.ring.printer.model.PrinterConfig
+import ngga.ring.printer.model.DiscoveredPrinter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -23,7 +23,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.*
@@ -34,10 +33,10 @@ import java.util.*
 class AndroidNetworkConnector : PrinterConnector {
     private var socket: Socket? = null
 
-    override suspend fun connect(config: PrinterConfigEntity): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun connect(config: PrinterConfig): Boolean = withContext(Dispatchers.IO) {
         try {
             socket = Socket()
-            socket?.connect(InetSocketAddress(config.ipAddress ?: "127.0.0.1", config.port), 5000)
+            socket?.connect(InetSocketAddress(config.address ?: "127.0.0.1", config.port), 5000)
             socket?.isConnected ?: false
         } catch (e: Exception) {
             false
@@ -67,14 +66,17 @@ class AndroidNetworkConnector : PrinterConnector {
 /**
  * Android Implementation for Bluetooth Classic.
  */
+/**
+ * Android Implementation for Bluetooth Classic.
+ */
 class AndroidBluetoothConnector : PrinterConnector {
     private var socket: BluetoothSocket? = null
     private val SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
 
-    override suspend fun connect(config: PrinterConfigEntity): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun connect(config: PrinterConfig): Boolean = withContext(Dispatchers.IO) {
         try {
-            val adapter = BluetoothAdapter.getDefaultAdapter()
-            val device = adapter.getRemoteDevice(config.macAddress ?: return@withContext false)
+            val adapter = BluetoothAdapter.getDefaultAdapter() ?: return@withContext false
+            val device = adapter.getRemoteDevice(config.address ?: return@withContext false)
             socket = device.createRfcommSocketToServiceRecord(SPP_UUID)
             socket?.connect()
             socket?.isConnected ?: false
@@ -111,13 +113,13 @@ class AndroidUsbConnector(private val context: Context) : PrinterConnector {
     private var usbInterface: UsbInterface? = null
     private var usbEndpoint: UsbEndpoint? = null
 
-    override suspend fun connect(config: PrinterConfigEntity): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun connect(config: PrinterConfig): Boolean = withContext(Dispatchers.IO) {
         try {
             val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
             val deviceList = usbManager.deviceList
             
-            // macAddress here used for VID:PID
-            val ids = config.macAddress?.split(":") ?: return@withContext false
+            // address here used for VID:PID
+            val ids = config.address?.split(":") ?: return@withContext false
             if (ids.size < 2) return@withContext false
             
             val device = deviceList.values.find { 
@@ -176,13 +178,13 @@ actual class PrinterConnectorFactory {
         this.context = context
     }
 
-    actual fun create(config: PrinterConfigEntity): PrinterConnector {
+    actual fun create(config: PrinterConfig): PrinterConnector {
         return when (config.connectionType) {
             "NETWORK" -> AndroidNetworkConnector()
             "BLUETOOTH" -> AndroidBluetoothConnector()
             "USB" -> AndroidUsbConnector(context)
             else -> object : PrinterConnector {
-                override suspend fun connect(config: PrinterConfigEntity) = false
+                override suspend fun connect(config: PrinterConfig) = false
                 override suspend fun sendData(data: ByteArray) = false
                 override suspend fun disconnect() {}
                 override fun isConnected() = false
@@ -190,7 +192,10 @@ actual class PrinterConnectorFactory {
         }
     }
 
-    actual suspend fun discovery(type: String, onLog: (String) -> Unit): Flow<List<DiscoveredPrinter>> {
+    actual suspend fun discovery(
+        type: String, 
+        onLog: (String) -> Unit
+    ): Flow<List<DiscoveredPrinter>> {
         return when (type) {
             "BLUETOOTH" -> bluetoothDiscovery(onLog)
             "USB" -> usbDiscovery(onLog)

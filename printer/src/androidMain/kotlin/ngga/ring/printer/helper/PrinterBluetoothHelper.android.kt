@@ -24,6 +24,13 @@ import kotlin.time.Clock
 actual class PrinterBluetoothHelper(
     private val context: Context
 ) {
+    companion object {
+        internal var instance: PrinterBluetoothHelper? = null
+    }
+
+    init {
+        instance = this
+    }
 
     val turnOnRequestMap: MutableMap<Long, () -> Unit> = mutableMapOf()
 

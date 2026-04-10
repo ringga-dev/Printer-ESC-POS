@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import org.koin.java.KoinJavaComponent.inject
 
 /**
  * A transparent activity used to request Bluetooth enablement from the user.
@@ -14,7 +13,9 @@ import org.koin.java.KoinJavaComponent.inject
  */
 class BluetoothEnableContainerActivity : AppCompatActivity() {
 
-    private val bluetoothHelper: PrinterBluetoothHelper by inject(PrinterBluetoothHelper::class.java)
+    private val bluetoothHelper: PrinterBluetoothHelper by lazy {
+        PrinterBluetoothHelper.instance ?: throw IllegalStateException("PrinterBluetoothHelper not initialized")
+    }
 
     private val enableBluetoothActivityForResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         val identifier = intent.getLongExtra("identifier", 0)

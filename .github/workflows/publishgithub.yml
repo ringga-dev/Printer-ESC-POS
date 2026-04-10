@@ -1,12 +1,14 @@
-name: Publish to GitHub Maven & Releases
+name: Unified Library Publishing (Maven & Releases)
 
 on:
   push:
+    branches:
+      - master
     tags:
-      - 'v*'  # Trigger only on version tags
+      - 'v*'  # Trigger on tags for official releases
 
 jobs:
-  # 1. Extract Version from gradle.properties
+  # 1. Setup & Version Extraction
   setup:
     name: Setup & Versioning
     runs-on: ubuntu-latest
@@ -14,13 +16,13 @@ jobs:
       lib_version: ${{ steps.get_version.outputs.LIB_VERSION }}
     steps:
       - uses: actions/checkout@v4
-      - name: Get Version
+      - name: Get Version from properties
         id: get_version
         run: |
           VERSION=$(grep 'LIB_VERSION=' gradle.properties | cut -d'=' -f2)
           echo "LIB_VERSION=$VERSION" >> $GITHUB_OUTPUT
 
-  # 2. Build Android AAR
+  # 2. Build Android AAR (Always runs)
   build-android:
     name: Build Android
     needs: setup
@@ -40,7 +42,7 @@ jobs:
           name: nggaprinter-aar
           path: printer/build/outputs/aar/printer-release.aar
 
-  # 3. Build iOS XCFramework
+  # 3. Build iOS XCFramework (Always runs)
   build-ios:
     name: Build iOS
     needs: setup
@@ -64,11 +66,12 @@ jobs:
           name: nggaprinter-xcframework
           path: NggaPrinter.xcframework.zip
 
-  # 4. Independent Maven Publishing
-  publish-maven:
-    name: Publish Maven Branch
+  # 4. Independent Publishing: GitHub Maven Repo
+  publish-github-maven:
+    name: Publish to GitHub Repo
     needs: setup
     runs-on: ubuntu-latest
+    if: success()
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -89,11 +92,34 @@ jobs:
           user_email: 'github-actions[bot]@users.noreply.github.com'
           commit_message: "Publish version ${{ needs.setup.outputs.lib_version }}"
 
-  # 5. Create GitHub Release (Collects artifacts from successful builds)
+  # 5. Independent Publishing: Maven Central (Sonatype)
+  # This uses "continue-on-error" so a Sonatype failure doesn't stop the GitHub release
+  publish-sonatype:
+    name: Publish to Maven Central
+    needs: setup
+    runs-on: macos-latest
+    continue-on-error: true 
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+      - name: Publish to Remote
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASSWORD }}
+        run: ./gradlew :printer:publish --no-daemon
+
+  # 6. Final Job: Create GitHub Release (Collects binaries)
+  # Only triggers on Tags
   create-release:
     name: Create GitHub Release
     needs: [setup, build-android, build-ios]
-    if: always() && needs.setup.result == 'success' # Run even if Android/iOS partially fail
+    if: startsWith(github.ref, 'refs/tags/v') && needs.setup.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Download Android Artifact
@@ -110,21 +136,24 @@ jobs:
           path: release_artifacts
         continue-on-error: true
 
-      - name: Create Release
+      - name: Create Release Page
         uses: softprops/action-gh-release@v2
         with:
           files: release_artifacts/*
           name: Release ${{ needs.setup.outputs.lib_version }}
           body: |
-            ## 📦 Binary Release ${{ needs.setup.outputs.lib_version }}
+            ## 📦 Release v${{ needs.setup.outputs.lib_version }}
             
-            Compiled binaries for manual integration. 
-            Note: If any target is missing, it may have failed during the build process.
+            This release includes compiled binaries for manual integration.
             
-            - **Android**: `NggaPrinter.aar`
-            - **iOS**: `NggaPrinter.xcframework.zip`
+            - **Android AAR**: For native Android projects.
+            - **iOS XCFramework**: For native iOS/Swift projects.
             
-            Untuk integrasi via Maven (Recommended), harap ikuti panduan di [INSTALLATION.md](./INSTALLATION.md).
+            ### Integration (GitHub Maven)
+            Add this to your `settings.gradle.kts`:
+            ```kotlin
+            maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }
+            ```
           draft: false
           prerelease: false
         env:

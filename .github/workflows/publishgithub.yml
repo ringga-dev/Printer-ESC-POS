@@ -152,22 +152,26 @@ jobs:
           name: sonatype-central-bundle
           path: SonatypeCentralBundle.zip
 
-  # 7. Final: Create GitHub Release (AUTO-RELEASE)
+  # 7. Final: Create GitHub Release (COMPLETELY AUTOMATIC)
   create-release:
     name: Create GitHub Release
     needs: [setup, build-android, build-ios, build-jvm, publish-sonatype-bundle]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: release_artifacts
 
-      - name: Create / Update Release
+      - name: Auto-Tag and Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.setup.outputs.lib_version }}
-          name: "Release v${{ needs.setup.outputs.lib_version }}"
+          name: "v${{ needs.setup.outputs.lib_version }}"
           files: |
             release_artifacts/nggaprinter-aar/*
             release_artifacts/nggaprinter-xcframework/*
@@ -177,34 +181,27 @@ jobs:
             ## 🚀 NggaPrinter v${{ needs.setup.outputs.lib_version }}
             
             Professional Kotlin Multiplatform Thermal Printing Library. 
-            This release is automatically generated and includes all compiled binaries.
+            Generated automatically from `master`.
 
             ### 📦 Compiled Assets
-            - **Android**: Native AAR for Android Studio
-            - **iOS**: XCFramework for Xcode / SPM
-            - **JVM**: JAR for Desktop / Server
-            - **Sonatype Central**: Bundle for Maven Central publication
+            - **Android**: `printer-release.aar`
+            - **iOS**: `NggaPrinter.xcframework.zip`
+            - **JVM**: Desktop JAR file
+            - **Bundle**: Sonatype Central (Manual Upload)
 
             ### 🛠️ Integration (GitHub Maven)
-            Add to your `settings.gradle.kts`:
             ```kotlin
-            dependencyResolutionManagement {
-                repositories {
-                    maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }
-                }
-            }
+            maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }
             ```
-
-            Then in your module:
+            
             ```kotlin
             implementation("io.github.ringga-dev:nggaprinter:v${{ needs.setup.outputs.lib_version }}")
             ```
-
-            ### 📖 Documentation
-            Check the updated [INSTALLATION.md](https://github.com/ringga-dev/Printer-ESC-POS/blob/master/INSTALLATION.md) for full guide.
           draft: false
           prerelease: false
           make_latest: true
           generate_release_notes: true
+          # Crucial: Allow creating/updating the tag if it matches the current setup
+          allowUpdates: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

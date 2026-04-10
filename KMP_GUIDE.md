@@ -31,8 +31,9 @@ Tambahkan izin Bluetooth dan Lokasi di `composeApp/src/androidMain/AndroidManife
 <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
 <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
-<!-- Izin Lokasi (diperlukan untuk scanning Bluetooth pada versi Android lama) -->
+<!-- Izin Lokasi (diperlukan untuk scanning Bluetooth pada versi Android lama dan Android 12+) -->
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 ```
 
 ### 🍎 iOS

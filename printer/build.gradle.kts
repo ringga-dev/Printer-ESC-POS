@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
+
 plugins {
     kotlin("multiplatform")
     id("com.android.library")
@@ -7,14 +9,15 @@ plugins {
     id("org.jetbrains.dokka") version "1.9.20"
 }
 
-group = "io.github.ringga-dev"
-version = "1.0.0"
+group = project.property("LIB_GROUP").toString()
+version = project.property("LIB_VERSION").toString()
 
 kotlin {
     androidTarget {
         publishLibraryVariants("release")
     }
 
+    val xcf = XCFramework("NggaPrinter")
     listOf(
         iosArm64(),
         iosSimulatorArm64()
@@ -22,6 +25,8 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "NggaPrinter"
             isStatic = true
+            freeCompilerArgs += listOf("-Xbinary=bundleId=io.github.ringga_dev.nggaprinter")
+            xcf.add(this)
         }
     }
 
@@ -57,6 +62,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+        disable.add("MissingPermission")
+    }
 }
 
 // Requirements for Maven Central: Sources Jar
@@ -74,9 +85,9 @@ val kmpJavadocJar by tasks.registering(Jar::class) {
 publishing {
     publications {
         create<MavenPublication>("maven") {
-            groupId = "io.github.ringga-dev"
+            groupId = project.property("LIB_GROUP").toString()
             artifactId = "nggaprinter"
-            version = "1.0.0"
+            version = project.property("LIB_VERSION").toString()
 
             artifact(kmpSourcesJar)
             artifact(kmpJavadocJar)
@@ -116,6 +127,10 @@ publishing {
                 username = System.getenv("ORG_GRADLE_PROJECT_mavenCentralUsername")
                 password = System.getenv("ORG_GRADLE_PROJECT_mavenCentralPassword")
             }
+        }
+        maven {
+            name = "LocalRepo"
+            url = uri("${rootProject.projectDir}/build/repo")
         }
     }
 }

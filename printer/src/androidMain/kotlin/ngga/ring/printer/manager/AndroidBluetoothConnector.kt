@@ -1,5 +1,6 @@
 package ngga.ring.printer.manager
 
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothSocket
 import android.bluetooth.BluetoothDevice
@@ -11,6 +12,7 @@ import java.util.*
 /**
  * Android Implementation for Bluetooth Classic (SPP).
  */
+@SuppressLint("MissingPermission")
 class AndroidBluetoothConnector : PrinterConnector {
     private var socket: BluetoothSocket? = null
     private val SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")

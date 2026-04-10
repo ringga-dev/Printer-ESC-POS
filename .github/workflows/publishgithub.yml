@@ -1,0 +1,131 @@
+name: Publish to GitHub Maven & Releases
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger only on version tags
+
+jobs:
+  # 1. Extract Version from gradle.properties
+  setup:
+    name: Setup & Versioning
+    runs-on: ubuntu-latest
+    outputs:
+      lib_version: ${{ steps.get_version.outputs.LIB_VERSION }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get Version
+        id: get_version
+        run: |
+          VERSION=$(grep 'LIB_VERSION=' gradle.properties | cut -d'=' -f2)
+          echo "LIB_VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+  # 2. Build Android AAR
+  build-android:
+    name: Build Android
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+      - name: Build AAR
+        run: ./gradlew :printer:assembleRelease --no-daemon
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nggaprinter-aar
+          path: printer/build/outputs/aar/printer-release.aar
+
+  # 3. Build iOS XCFramework
+  build-ios:
+    name: Build iOS
+    needs: setup
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+      - name: Build XCFramework
+        run: ./gradlew :printer:assembleNggaPrinterXCFramework --no-daemon
+      - name: Zip XCFramework
+        run: |
+          cd printer/build/XCFrameworks/release/
+          zip -r ../../../NggaPrinter.xcframework.zip NggaPrinter.xcframework
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nggaprinter-xcframework
+          path: NggaPrinter.xcframework.zip
+
+  # 4. Independent Maven Publishing
+  publish-maven:
+    name: Publish Maven Branch
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+      - name: Publish to Local Folder
+        run: ./gradlew :printer:publishAllPublicationsToLocalRepoRepository --no-daemon
+      - name: Deploy to maven-repo branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/repo
+          publish_branch: maven-repo
+          force_orphan: false
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: "Publish version ${{ needs.setup.outputs.lib_version }}"
+
+  # 5. Create GitHub Release (Collects artifacts from successful builds)
+  create-release:
+    name: Create GitHub Release
+    needs: [setup, build-android, build-ios]
+    if: always() && needs.setup.result == 'success' # Run even if Android/iOS partially fail
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Android Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nggaprinter-aar
+          path: release_artifacts
+        continue-on-error: true
+
+      - name: Download iOS Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nggaprinter-xcframework
+          path: release_artifacts
+        continue-on-error: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release_artifacts/*
+          name: Release ${{ needs.setup.outputs.lib_version }}
+          body: |
+            ## 📦 Binary Release ${{ needs.setup.outputs.lib_version }}
+            
+            Compiled binaries for manual integration. 
+            Note: If any target is missing, it may have failed during the build process.
+            
+            - **Android**: `NggaPrinter.aar`
+            - **iOS**: `NggaPrinter.xcframework.zip`
+            
+            Untuk integrasi via Maven (Recommended), harap ikuti panduan di [INSTALLATION.md](./INSTALLATION.md).
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

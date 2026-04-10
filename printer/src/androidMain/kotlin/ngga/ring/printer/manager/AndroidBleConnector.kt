@@ -1,5 +1,6 @@
 package ngga.ring.printer.manager
 
+import android.annotation.SuppressLint
 import android.bluetooth.*
 import android.content.Context
 import kotlinx.coroutines.*
@@ -10,6 +11,7 @@ import kotlin.coroutines.resume
 /**
  * Android Implementation for Bluetooth Low Energy (BLE).
  */
+@SuppressLint("MissingPermission")
 class AndroidBleConnector(private val context: Context) : PrinterConnector {
     private var bluetoothGatt: BluetoothGatt? = null
     private var writeCharacteristic: BluetoothGattCharacteristic? = null

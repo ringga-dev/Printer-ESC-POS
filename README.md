@@ -1,15 +1,24 @@
 # 🖨️ NggaPrinter
 **The Ultimate Kotlin Multiplatform Thermal Printing Suite.**
 
-![Build Status](https://github.com/ringga-dev/Printer-ESC-POS/actions/workflows/publish.yml/badge.svg)
+**Languages:** **Bahasa Indonesia** | [English](./README_EN.md) | [简体中文](./README_ZH.md)
+
+![Build Status](https://github.com/ringga-dev/Printer-ESC-POS/actions/workflows/publishgithub.yml/badge.svg)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![KMP](https://img.shields.io/badge/Kotlin-Multiplatform-blue?logo=kotlin)](https://kotlinlang.org/docs/multiplatform.html)
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.ringga-dev/nggaprinter.svg)](https://central.sonatype.com/)
+[![Release](https://img.shields.io/github/v/release/ringga-dev/Printer-ESC-POS?color=orange&logo=github)](https://github.com/ringga-dev/Printer-ESC-POS/releases)
 
 NggaPrinter adalah library thermal printing ESC/POS yang dirancang untuk performa tinggi dan kemudahan integrasi di **Android, iOS, dan JVM (Desktop)**. Menggunakan arsitektur **Connector Pattern** yang terpadu, Anda dapat mengontrol berbagai merk printer thermal (Bluetooth, USB, Network) dengan satu standar kode yang sama.
 
 > [!TIP]
-> **Baru menggunakan KMP?** Lihat [Panduan Integrasi KMP](file:///d:/Android/project/Printer%20ESCPOS/KMP_GUIDE.md) untuk detail setup tiap platform.
+> **Baru menggunakan KMP?** Lihat [Panduan Integrasi KMP](./KMP_GUIDE.md) atau cari binari siap pakai di halaman [Releases](https://github.com/ringga-dev/Printer-ESC-POS/releases).
+
+---
+
+## 📦 Latest Binaries
+Untuk Anda yang tidak ingin menggunakan dependency manager, Anda bisa langsung mendownload file `.aar` dan `.xcframework` dari halaman release kami:
+
+👉 **[Download NggaPrinter v1.0.0](https://github.com/ringga-dev/Printer-ESC-POS/releases/latest)**
 
 ---
 
@@ -30,40 +39,13 @@ Sebelum memulai, pastikan project Anda memenuhi persyaratan minimum berikut:
 
 ## 📥 Installation
 
-### Method A: Maven Central / JitPack (Recommended)
-Add this to your `build.gradle.kts` inside the `commonMain` source set:
+Kami menyediakan berbagai metode integrasi untuk memudahkan Anda, baik itu project KMP, Android Native, maupun iOS Native.
 
-```kotlin
-// In your root settings.gradle.kts
-dependencyResolutionManagement {
-    repositories {
-        maven { url = uri("https://jitpack.io") }
-        mavenCentral()
-    }
-}
+👉 **[Lihat Panduan Instalasi Lengkap (INSTALLATION.md)](./INSTALLATION.md)**
 
-// In your shared/module build.gradle.kts
-kotlin {
-    sourceSets {
-        commonMain.dependencies {
-            implementation("com.github.ringga-dev:Printer-ESC-POS:1.0.0")
-        }
-    }
-}
-```
-
-### Method B: Local Module
-1.  Salin folder `/printer` ke direktori root project Anda.
-2.  Tambahkan modul ke `settings.gradle.kts`:
-    ```kotlin
-    include(":printer")
-    ```
-3.  Implementasikan di `build.gradle.kts` modul Anda:
-    ```kotlin
-    commonMain.dependencies {
-        implementation(project(":printer"))
-    }
-    ```
+*   **Method A**: GitHub Maven Repo (Recommended for KMP)
+*   **Method B**: Manual Binary Download (AAR/XCFramework)
+*   **Method C**: Local Source Module
 
 ---
 

@@ -2,6 +2,8 @@
 
 A professional guide to integrating and mastering thermal printing in KMP.
 
+👉 **Looking for setup instructions?** See [INSTALLATION.md](./INSTALLATION.md).
+
 ---
 
 ## 🛠️ 1. Architecture: The Connector Pattern

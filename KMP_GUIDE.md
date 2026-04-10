@@ -4,20 +4,37 @@ Panduan ini akan membantu Anda mengintegrasikan **NggaPrinter** ke dalam project
 
 ---
 
-## 1. Setup Dependency
+## 1. Setup Repository & Dependency
 
+### Tambahkan Repository
+Buka `settings.gradle.kts` (Level Project) dan tambahkan repository GitHub Maven:
+
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        // Repository NggaPrinter di GitHub
+        maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }
+    }
+}
+```
+
+### Tambahkan Dependency
 Tambahkan library ke dalam blok `commonMain` pada file `build.gradle.kts` di modul shared Anda:
 
 ```kotlin
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            // Pastikan Anda sudah menambahkan repository Maven Central / JitPack
             implementation("io.github.ringga-dev:nggaprinter:1.0.0")
         }
     }
 }
 ```
+
+> [!TIP]
+> Untuk opsi instalasi manual (Binari .aar/.xcframework), silakan baca [Panduan Instalasi Lengkap](./INSTALLATION.md).
 
 ---
 

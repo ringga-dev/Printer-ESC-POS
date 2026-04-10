@@ -11,6 +11,22 @@ package ngga.ring.printer.util.escpos
 class ESCPosCommandBuilder(
     val config: ESCPosConfig = ESCPosConfig()
 ) {
+    companion object {
+        fun fromPrinterConfig(config: ngga.ring.printer.model.PrinterConfig): ESCPosCommandBuilder {
+            val dots = if (config.paperWidthDots > 0) {
+                config.paperWidthDots
+            } else {
+                // Heuristic: (PaperWidth - 10mm margin) * 8 dots/mm
+                ((config.paperWidth - 10) * 8).coerceAtLeast(384)
+            }
+            return ESCPosCommandBuilder(
+                ESCPosConfig(
+                    charsPerLine = config.characterPerLine,
+                    paperWidthDots = dots
+                )
+            )
+        }
+    }
 
     private val buffer = mutableListOf<Byte>()
     private var currentWidthMultiplier = 1
@@ -26,10 +42,21 @@ class ESCPosCommandBuilder(
      * High-level text helpers
      * ------------------------------------------------------------ */
 
-    /** Writes a text line followed by a line feed (LF). */
+    /** Writes a text line followed by a line feed (LF). Applies safety margin to prevent hardware wrapping. */
     fun line(text: String = ""): ESCPosCommandBuilder {
-        writeText(text)
+        val safeMax = (config.charsPerLine / currentWidthMultiplier - 1).coerceAtLeast(1)
+        val safeText = if (text.length > safeMax) text.take(safeMax) else text
+        writeText(safeText)
         writeLF()
+        return this
+    }
+
+    /**
+     * Prints a row of a table with relative weights.
+     * Use this for complex product listings.
+     */
+    fun tableRow(columns: List<String>, weights: List<Int>): ESCPosCommandBuilder {
+        line(ESCPosTextLayout.tableRow(columns, weights, config.charsPerLine / currentWidthMultiplier))
         return this
     }
 
@@ -52,10 +79,16 @@ class ESCPosCommandBuilder(
         return this
     }
 
-    /** Centers the given text (string only, no ESC alignment). */
+    /** Centers the given text (uses hardware alignment if possible, otherwise software spaces). */
     fun centerText(text: String): ESCPosCommandBuilder {
-        writeText(ESCPosTextLayout.centeredText(text, config.charsPerLine / currentWidthMultiplier))
-        writeLF()
+        if (currentAlignment == TextAlignment.CENTER) {
+            // Hardware alignment is already center
+            line(text.trim())
+        } else {
+            // Use software spaces
+            writeText(ESCPosTextLayout.centeredText(text, config.charsPerLine / currentWidthMultiplier))
+            writeLF()
+        }
         return this
     }
 
@@ -70,15 +103,23 @@ class ESCPosCommandBuilder(
         return this
     }
 
-    /** Prints a divider line using a specific character. */
+    /** Prints a divider line using a specific character. Forces left alignment. */
     fun divider(char: Char = '-'): ESCPosCommandBuilder {
-        line(char.toString().repeat(config.charsPerLine / currentWidthMultiplier))
+        val prevAlign = currentAlignment
+        setAlignment(TextAlignment.LEFT)
+        val safeMax = (config.charsPerLine / currentWidthMultiplier - 1).coerceAtLeast(1)
+        line(char.toString().repeat(safeMax))
+        setAlignment(prevAlign)
         return this
     }
 
-    /** Prints a sub-divider line using a specific character. */
+    /** Prints a sub-divider line using a specific character. Forces left alignment. */
     fun subDivider(char: Char = '-'): ESCPosCommandBuilder {
-        line(char.toString().repeat(config.charsPerLine / currentWidthMultiplier))
+        val prevAlign = currentAlignment
+        setAlignment(TextAlignment.LEFT)
+        val safeMax = (config.charsPerLine / currentWidthMultiplier - 1).coerceAtLeast(1)
+        line(char.toString().repeat(safeMax))
+        setAlignment(prevAlign)
         return this
     }
 
@@ -140,7 +181,14 @@ class ESCPosCommandBuilder(
      * @param width Width in pixels.
      * @param height Height in pixels.
      */
-    fun image(bytes: ByteArray, width: Int, height: Int): ESCPosCommandBuilder {
+    fun image(
+        bytes: ByteArray, 
+        width: Int, 
+        height: Int,
+        center: Boolean = false
+    ): ESCPosCommandBuilder {
+        if (center) alignCenter()
+        
         val widthBytes = (width + 7) / 8
         val xL = widthBytes % 256
         val xH = widthBytes / 256
@@ -149,6 +197,8 @@ class ESCPosCommandBuilder(
 
         writeRaw(0x1D, 0x76, 0x30, 0x00, xL, xH, yL, yH)
         writeBytes(bytes)
+        
+        if (center) alignLeft()
         return this
     }
 
@@ -164,8 +214,11 @@ class ESCPosCommandBuilder(
         data: String,
         type: Int = 73,
         height: Int = 162,
-        width: Int = 3
+        width: Int = 3,
+        center: Boolean = false
     ): ESCPosCommandBuilder {
+        if (center) alignCenter()
+        
         // Set height
         writeRaw(0x1D, 0x68, height.coerceIn(1, 255))
         // Set width
@@ -175,6 +228,8 @@ class ESCPosCommandBuilder(
         val bytes = data.encodeToByteArray()
         writeRaw(0x1D, 0x6B, type, bytes.size)
         writeBytes(bytes)
+        
+        if (center) alignLeft()
         return this
     }
 
@@ -183,8 +238,11 @@ class ESCPosCommandBuilder(
      * 
      * @param data QR code content.
      * @param size Module size 1..16 (Default 8).
+     * @param center Whether to center the QR code.
      */
-    fun qrCode(data: String, size: Int = 8): ESCPosCommandBuilder {
+    fun qrCode(data: String, size: Int = 8, center: Boolean = false): ESCPosCommandBuilder {
+        if (center) alignCenter()
+        
         val bytes = data.encodeToByteArray()
         val numBytes = bytes.size + 3
         val pL = numBytes % 256
@@ -206,6 +264,7 @@ class ESCPosCommandBuilder(
         // 5. Print
         writeRaw(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30)
         
+        if (center) alignLeft()
         return this
     }
 
@@ -233,6 +292,16 @@ class ESCPosCommandBuilder(
         return this
     }
 
+    fun underline(enabled: Boolean): ESCPosCommandBuilder {
+        if (enabled) underlineOn() else underlineOff()
+        return this
+    }
+
+    fun invert(enabled: Boolean): ESCPosCommandBuilder {
+        if (enabled) invertOn() else invertOff()
+        return this
+    }
+
     fun bigFont(): ESCPosCommandBuilder {
         setTextSize(2, 2)
         return this
@@ -245,9 +314,51 @@ class ESCPosCommandBuilder(
 
     fun feedLines(lines: Int): ESCPosCommandBuilder = feed(lines)
 
+    /**
+     * Prints a calibration ruler to help identify the hardware's printable area in dots.
+     * Output format: 0    50   100  150...
+     *                |....|....|....|....
+     */
+    fun printRuler(): ESCPosCommandBuilder {
+        val totalDots = config.paperWidthDots
+        line("HARDWARE CALIBRATION RULER")
+        line("-".repeat(config.charsPerLine))
+        
+        // Numbers row (every 50 dots)
+        val numbers = StringBuilder()
+        for (i in 0..totalDots step 50) {
+            numbers.append(i.toString().padEnd(5))
+        }
+        line(numbers.toString())
+        
+        // Ticks row (every 10 dots)
+        val ticks = StringBuilder()
+        for (i in 0..totalDots step 10) {
+            ticks.append(if (i % 50 == 0) "|" else ".")
+        }
+        line(ticks.toString())
+        
+        line("-".repeat(config.charsPerLine))
+        line("Max Dots Configured: $totalDots")
+        feed(3)
+        return this
+    }
+
     /** Sends the ESC @ command (printer reset/initialize). */
     fun initialize(): ESCPosCommandBuilder {
-        writeRaw(0x1B, 0x40)
+        writeRaw(0x1B, 0x40) // Reset
+        setPrintableAreaWidth(config.paperWidthDots) // Align hardware to paper size
+        return this
+    }
+
+    /**
+     * Sets the width of the printable area. (GS W nL nH)
+     * n = nL + nH * 256
+     */
+    fun setPrintableAreaWidth(dots: Int): ESCPosCommandBuilder {
+        val nL = dots % 256
+        val nH = dots / 256
+        writeRaw(0x1D, 0x57, nL, nH)
         return this
     }
 
@@ -257,6 +368,34 @@ class ESCPosCommandBuilder(
     fun cut(full: Boolean = true): ESCPosCommandBuilder {
         val mode: Int = if (full) 0x00 else 0x01
         writeRaw(0x1D, 0x56, mode)
+        return this
+    }
+
+    /**
+     * Pulse command to kick the cash drawer.
+     * Usually pin 2 or pin 5 (Default pin 2).
+     */
+    fun openCashDrawer(pin: Int = 0): ESCPosCommandBuilder {
+        val p = if (pin == 0) 0x00 else 0x01
+        writeRaw(0x1B, 0x70, p, 0x32, 0xFF)
+        return this
+    }
+
+    /**
+     * Sets line spacing in dots (n/180 inch or n/203 inch depending on printer).
+     * ESC 3 n
+     */
+    fun setLineSpacing(dots: Int): ESCPosCommandBuilder {
+        writeRaw(0x1B, 0x33, dots.coerceIn(0, 255))
+        return this
+    }
+
+    /**
+     * Resets line spacing to default (1/6 inch).
+     * ESC 2
+     */
+    fun resetLineSpacing(): ESCPosCommandBuilder {
+        writeRaw(0x1B, 0x32)
         return this
     }
 
@@ -290,7 +429,13 @@ class ESCPosCommandBuilder(
     private fun boldOn() = writeRaw(0x1B, 0x45, 0x01)
     private fun boldOff() = writeRaw(0x1B, 0x45, 0x00)
 
-    private fun setAlignment(align: TextAlignment) {
+    private fun underlineOn() = writeRaw(0x1B, 0x2D, 0x01)
+    private fun underlineOff() = writeRaw(0x1B, 0x2D, 0x00)
+
+    private fun invertOn() = writeRaw(0x1D, 0x42, 0x01)
+    private fun invertOff() = writeRaw(0x1D, 0x42, 0x00)
+
+    fun setAlignment(align: TextAlignment): ESCPosCommandBuilder {
         this.currentAlignment = align
         val mode = when (align) {
             TextAlignment.LEFT -> 0
@@ -298,6 +443,7 @@ class ESCPosCommandBuilder(
             TextAlignment.RIGHT -> 2
         }
         writeRaw(0x1B, 0x61, mode)
+        return this
     }
 
     private fun setTextSize(width: Int, height: Int) {

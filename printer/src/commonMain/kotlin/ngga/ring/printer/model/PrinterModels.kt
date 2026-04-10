@@ -9,8 +9,9 @@ data class PrinterConfig(
     val connectionType: String, // "BLUETOOTH", "USB", "NETWORK"
     val address: String? = null, // MAC for BT, IP for Network, VID:PID for USB
     val port: Int = 9100,
-    val characterPerLine: Int = 32,
-    val paperWidth: Int = 58
+    val characterPerLine: Int = 31,
+    val paperWidth: Int = 58,
+    val paperWidthDots: Int = 0 // Optional: Set explicitly for custom sizes
 )
 
 /**

@@ -6,17 +6,10 @@ package ngga.ring.printer.util.escpos
  */
 object ESCPosTextLayout {
 
-    /**
-     * Produces a single-line text segment with a left label and a right value.
-     * Example:
-     *   max = 32
-     *   left = "Subtotal"
-     *   right = "10.000"
-     * Output:
-     *   "Subtotal                10.000"
-     *
-     * If [left] is too long, it will be truncated and suffixed with "...".
-     */
+    // A safety margin ensures the printer hardware buffer never hits 100% capacity in one line,
+    // which prevents automatic (and redundant) line feeds from the firmware.
+    private const val SAFETY_MARGIN = 1
+
     /**
      * Produces a single-line text segment with a left label and a right value.
      * Handles wrapping/truncation gracefully to ensure the right value is ALWAYS visible.
@@ -26,10 +19,11 @@ object ESCPosTextLayout {
         right: String,
         maxCharsPerLine: Int
     ): String {
-        if (maxCharsPerLine <= 0) return "$left $right"
-
-        val rightPart = " $right"
-        val maxLeft = (maxCharsPerLine - rightPart.length).coerceAtLeast(0)
+        val safeMax = (maxCharsPerLine - SAFETY_MARGIN).coerceAtLeast(1)
+        
+        // Right part always gets a space prefix for separation if there's room
+        val rightPart = if (right.length < safeMax) " $right" else right.take(safeMax)
+        val maxLeft = (safeMax - rightPart.length).coerceAtLeast(0)
         
         val trimmedLeft = if (left.length > maxLeft) {
             if (maxLeft > 3) left.take(maxLeft - 3) + "..."
@@ -38,31 +32,33 @@ object ESCPosTextLayout {
             left
         }
 
-        val spaces = (maxCharsPerLine - trimmedLeft.length - right.length)
-            .coerceAtLeast(1)
+        // Calculate exact spaces needed to fill the gap
+        val spacesNeeded = (safeMax - trimmedLeft.length - right.length).coerceAtLeast(0)
 
         return buildString {
             append(trimmedLeft)
-            repeat(spaces) { append(' ') }
-            append(right)
+            repeat(spacesNeeded) { append(' ') }
+            append(right.take(safeMax - trimmedLeft.length - spacesNeeded).ifEmpty { right })
         }
     }
 
     /**
-     * Centers a text string into the given line width.
+     * Centers a text string into the given line width using spaces.
      */
     fun centeredText(
         text: String,
         maxCharsPerLine: Int
     ): String {
-        if (maxCharsPerLine <= 0) return text
-        if (text.length >= maxCharsPerLine) return text.take(maxCharsPerLine)
+        val safeMax = (maxCharsPerLine - SAFETY_MARGIN).coerceAtLeast(1)
+        val cleanText = text.trim()
+        
+        if (cleanText.length >= safeMax) return cleanText.take(safeMax)
 
-        val totalPadding = maxCharsPerLine - text.length
+        val totalPadding = safeMax - cleanText.length
         val leftPad = totalPadding / 2
         val rightPad = totalPadding - leftPad
 
-        return " ".repeat(leftPad) + text + " ".repeat(rightPad)
+        return " ".repeat(leftPad) + cleanText + " ".repeat(rightPad)
     }
 
     /**
@@ -70,16 +66,54 @@ object ESCPosTextLayout {
      */
     fun centerText(maxCharsPerLine: Int, text: String, maxLine: Int = 5): String {
         if (text.isBlank()) return ""
+        val safeMax = (maxCharsPerLine - SAFETY_MARGIN).coerceAtLeast(1)
         
-        val chunks = text.chunked(maxCharsPerLine)
+        val chunks = text.chunked(safeMax)
         val finalLines = if (chunks.size > maxLine) {
-            chunks.take(maxLine - 1) + (chunks[maxLine - 1].take((maxCharsPerLine - 3).coerceAtLeast(0)) + "...")
+            chunks.take(maxLine - 1) + (chunks[maxLine - 1].take((safeMax - 3).coerceAtLeast(0)) + "...")
         } else {
             chunks
         }
 
         return finalLines.joinToString("\n") { line ->
-            centeredText(line.trim(), maxCharsPerLine)
+            centeredText(line.trim(), maxCharsPerLine) // centeredText will apply safety again
+        }
+    }
+
+    /**
+     * Produces a multi-column table row using weights.
+     */
+    fun tableRow(
+        columns: List<String>,
+        weights: List<Int>,
+        maxCharsPerLine: Int
+    ): String {
+        if (columns.isEmpty() || weights.isEmpty() || columns.size != weights.size) return ""
+        
+        val safeMax = (maxCharsPerLine - SAFETY_MARGIN).coerceAtLeast(1)
+        val totalWeight = weights.sum().toDouble()
+        val charsPerWeight = safeMax / totalWeight
+        
+        return buildString {
+            columns.zip(weights).forEachIndexed { index, (text, weight) ->
+                val colWidth = if (index == columns.lastIndex) {
+                    safeMax - length
+                } else {
+                    (weight * charsPerWeight).toInt()
+                }
+                
+                val content = if (text.length > colWidth) {
+                    text.take((colWidth - 1).coerceAtLeast(0)) + " "
+                } else {
+                    val alignment = if (index == 0) "left" else if (index == columns.lastIndex) "right" else "center"
+                    when (alignment) {
+                        "left" -> text.padEnd(colWidth)
+                        "right" -> text.padStart(colWidth)
+                        else -> centeredText(text, colWidth + SAFETY_MARGIN) // pass back full width since safety is here
+                    }
+                }
+                append(content.take(colWidth))
+            }
         }
     }
 }

@@ -1,13 +1,15 @@
 package ngga.ring.printer
 
+import ngga.ring.printer.model.*
+import ngga.ring.printer.util.ConnectionState
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
 import ngga.ring.printer.manager.PrinterConnector
 import ngga.ring.printer.manager.PrinterConnectorFactory
-import ngga.ring.printer.model.PrinterConfig
-import ngga.ring.printer.model.ReceiptData
-import ngga.ring.printer.model.BusinessInfo
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import ngga.ring.printer.model.PrintStatus
+import ngga.ring.printer.util.escpos.ESCPosCommandBuilder
 
 /**
  * The "Satu Pintu" (Single Entry Point) for the printer library.
@@ -22,24 +24,39 @@ class NggaPrinter {
     val connectorFactory = PrinterConnectorFactory()
     
     /**
-     * Managed connector instance. Can be used for persistent connections.
+     * Managed connector instance.
      */
     private var activeConnector: PrinterConnector? = null
+
+    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
+    
+    /**
+     * Observe the current connection status of the printer.
+     */
+    val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
     val receiptService = ReceiptService()
 
     /**
+     * Creates a new CommandBuilder pre-configured for the specific printer.
+     */
+    fun newCommandBuilder(config: PrinterConfig): ESCPosCommandBuilder {
+        return ESCPosCommandBuilder.fromPrinterConfig(config)
+    }
+
+    /**
+     * Discovers printers based on the specified type.
+     */
+    fun discovery(
+        type: String, 
+        config: DiscoveryConfig = DiscoveryConfig(),
+        onLog: (String) -> Unit = {}
+    ): Flow<List<DiscoveredPrinter>> {
+        return connectorFactory.discovery(type, config, onLog)
+    }
+
+    /**
      * Prints a professionally styled receipt using the specified configuration and data.
-     * This method automatically handles:
-     * 1. Multi-platform connection management.
-     * 2. Receipt layout generation (Precision ESC/POS).
-     * 3. Data transmission and cleanup.
-     *
-     * @param config The target printer configuration.
-     * @param business Information about the merchant/store.
-     * @param data The transaction details (Items, Tax, QR Code, etc).
-     * @param role The template role (Default: "KASIR").
-     * @return true if the print job was successfully transmitted.
      */
     fun printReceipt(
         config: PrinterConfig,
@@ -61,18 +78,22 @@ class NggaPrinter {
      * @param data The raw byte array to send.
      */
     fun printRaw(config: PrinterConfig, data: ByteArray): Flow<PrintStatus> = flow {
-        val connector = activeConnector ?: connectorFactory.create(config)
+        val connector = activeConnector ?: connectorFactory.create(config).also { activeConnector = it }
         
         try {
             if (!connector.isConnected()) {
                 emit(PrintStatus.Connecting)
+                _connectionState.value = ConnectionState.Connecting
+                
                 val success = connector.connect(config)
                 if (!success) {
                     emit(PrintStatus.Error("Failed to connect to printer"))
+                    _connectionState.value = ConnectionState.Error("Failed to connect to printer")
                     return@flow
                 }
             }
             
+            _connectionState.value = ConnectionState.Connected(config.name, config.address)
             emit(PrintStatus.Sending)
             val sent = connector.sendData(data)
             
@@ -83,6 +104,7 @@ class NggaPrinter {
             }
 
         } catch (e: Exception) {
+            _connectionState.value = ConnectionState.Error(e.message ?: "Unknown print error")
             emit(PrintStatus.Error(e.message ?: "Unknown print error"))
         }
     }
@@ -90,9 +112,9 @@ class NggaPrinter {
     /**
      * Prints a professional hardware test page containing styles, barcodes, and QR codes.
      */
-    fun printTestPage(config: PrinterConfig, cpl: Int = 32): Flow<PrintStatus> = flow {
+    fun printTestPage(config: PrinterConfig): Flow<PrintStatus> = flow {
         emit(PrintStatus.Processing)
-        val bytes = receiptService.generateTestPrint(cpl)
+        val bytes = receiptService.generateTestPrint(config)
         
         printRaw(config, bytes).collect { status ->
             emit(status)
@@ -105,5 +127,6 @@ class NggaPrinter {
     suspend fun disconnect() {
         activeConnector?.disconnect()
         activeConnector = null
+        _connectionState.value = ConnectionState.Disconnected
     }
 }

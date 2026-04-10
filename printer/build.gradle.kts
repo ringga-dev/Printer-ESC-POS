@@ -1,17 +1,23 @@
 plugins {
     kotlin("multiplatform")
     id("com.android.library")
+    id("maven-publish")
 }
 
+group = "io.github.ringga-dev"
+version = "1.0.0"
+
 kotlin {
-    androidTarget()
+    androidTarget {
+        publishLibraryVariants("release")
+    }
     
     listOf(
         iosArm64(),
         iosSimulatorArm64()
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
-            baseName = "Printer"
+            baseName = "NggaPrinter"
             isStatic = true
         }
     }
@@ -47,5 +53,39 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+    }
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = "io.github.ringga-dev"
+            artifactId = "nggaprinter"
+            version = "1.0.0"
+            
+            pom {
+                name.set("NggaPrinter")
+                description.set("Professional Kotlin Multiplatform Thermal Printing Library for ESC/POS.")
+                url.set("https://github.com/ringga-dev/Printer-ESC-POS")
+                licenses {
+                    license {
+                        name.set("MIT License")
+                        url.set("https://opensource.org/licenses/MIT")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("ringga")
+                        name.set("Ringga")
+                        email.set("ringga@dev.com")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:git://github.com/ringga-dev/Printer-ESC-POS.git")
+                    developerConnection.set("scm:git:ssh://github.com/ringga-dev/Printer-ESC-POS.git")
+                    url.set("https://github.com/ringga-dev/Printer-ESC-POS")
+                }
+            }
+        }
     }
 }

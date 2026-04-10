@@ -11,60 +11,61 @@ NggaPrinter uses a factory-based **Connector Pattern**. This decouples the disco
 ### Key Components
 - **`NggaPrinter`**: The high-level facade for printing receipts and raw bytes.
 - **`PrinterConnectorFactory`**: The platform-native engine for finding and creating connectors.
-- **`PrinterConnector`**: The interface representing a single active session (Bluetooth, USB, or Network).
+- **`PrinterConnector`**: The interface representing a single active session.
 
 ---
 
-## 📡 2. Device Discovery
+## 📝 2. Professional Commands (Builder)
 
-Discovery is reactive and flow-based. It provides real-time logs for better debugging.
+Use `newCommandBuilder(config)` to access top-tier formatting tools:
 
 ```kotlin
-val flow = printer.connectorFactory.discovery("USB") { log ->
-    // Display this in a status bar or log panel
-    println("Scan status: $log")
-}
-
-val devices = flow.first() // Or collect it in UI
+builder.initialize()
+    .alignCenter()
+    .setBold(true)
+    .line("OFFICIAL RECEIPT")
+    .setBold(false)
+    .divider()
+    // Multi-column table with weights [Item:2, Qty:1, Price:1]
+    .tableRow(listOf("Spicy Ramen", "1x", "45.000"), listOf(2, 1, 1))
+    .tableRow(listOf("Iced Tea", "2x", "10.000"), listOf(2, 1, 1))
+    .divider()
+    .invert(true) // Professional "Reverse" style
+    .line(" THANK YOU ")
+    .invert(false)
+    .cutPaper()
 ```
 
 ---
 
-## 📝 3. Precision Layouts
+## 🖼️ 3. Advanced Image Dithering
 
-The `ESCPosTextLayout` engine handles string padding and wrapping to ensure your receipts look identical on different hardware.
-
-### Best Practices:
-1.  **58mm Paper**: Use **32 CPL** (Characters Per Line). Standard for compact mobile printers.
-2.  **80mm Paper**: Use **42-48 CPL**. Standard for kitchen and POS desktop printers.
-3.  **Encoding**: The library uses standard System B codes. Ensure your printer is set to **CodePage 0 (PC437)** for maximum compatibility.
+Printing photos on thermal paper often looks "blochy". NggaPrinter now defaults to **Floyd-Steinberg Dithering** in `BitmapToEscPos` (Android), ensuring smooth gradients for logos and profile pictures.
 
 ---
 
-## 💰 4. Accounting & Fiscal Support
+## 📡 4. Device Discovery
 
-The `ReceiptData` model is built for professional fiscal requirements.
+Discovery is reactive and flow-based. It provides real-time logs for better debugging.
 
-| Field | Description | Renders as |
-| :--- | :--- | :--- |
-| `taxAmount` | VAT / Pajak | Automated breakdown row |
-| `discountAmount` | Global discount | Strikethrough-style row |
-| `verificationUrl` | Fiscal verification | High-density **QR Code** |
-| `transactionId` | Unique ID | **CODE128 Barcode** |
+```kotlin
+val flow = printer.discovery("BLUETOOTH", DiscoveryConfig(showVirtualDevices = true)) { log ->
+    println("Scan status: $log")
+}
+```
 
 ---
 
-## ⚠️ Platform-Specific Setup
+## ⚠️ 5. Platform-Specific Setup
 
 ### Android
-- Bluetooth scanning requires `FINE_LOCATION` and `BLUETOOTH_SCAN`.
-- USB requires permission intent if vendor isn't registered in `device_filter`.
+- Requires `FINE_LOCATION` and `BLUETOOTH_SCAN` (Android 12+).
+- Use `PrinterPermissionManager` helper to handle results.
 
 ### iOS
-- Uses CoreBluetooth (BLE). Ensure the printer supports the BLE peripheral profile.
-
-### JVM
-- Network (TCP) is the most stable for JVM desktop apps. USB support requires specific driver matching.
+- Uses **CoreBluetooth (BLE)**.
+- Ensure `Info.plist` has `NSBluetoothAlwaysUsageDescription`.
+- The library automatically handles service discovery (FF00/FF01 standards).
 
 ---
 

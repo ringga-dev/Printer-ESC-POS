@@ -14,10 +14,10 @@ class ReceiptService {
 
 
     /**
-     * Generates a comprehensive hardware test page.
+     * Generates a comprehensive hardware test page adapted to printer configuration.
      */
-    fun generateTestPrint(cpl: Int = 32): ByteArray {
-        val builder = ESCPosCommandBuilder(ESCPosConfig(charsPerLine = cpl)).initialize()
+    fun generateTestPrint(config: ngga.ring.printer.model.PrinterConfig): ByteArray {
+        val builder = ESCPosCommandBuilder.fromPrinterConfig(config).initialize()
         
         // Sample receipt data
         val storeName = "NGGA Store"

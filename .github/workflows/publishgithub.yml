@@ -34,6 +34,8 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           cache: 'gradle'
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
       - name: Build AAR
         run: ./gradlew :printer:assembleRelease --no-daemon
       - name: Upload Artifact
@@ -54,6 +56,8 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           cache: 'gradle'
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
       - name: Build XCFramework
         run: ./gradlew :printer:assembleNggaPrinterXCFramework --no-daemon
       - name: Zip XCFramework
@@ -79,6 +83,8 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           cache: 'gradle'
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
       - name: Publish to Local Folder
         run: ./gradlew :printer:publishAllPublicationsToLocalRepoRepository --no-daemon
       - name: Deploy to maven-repo branch
@@ -106,6 +112,8 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           cache: 'gradle'
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
       - name: Publish to Remote
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_USERNAME }}

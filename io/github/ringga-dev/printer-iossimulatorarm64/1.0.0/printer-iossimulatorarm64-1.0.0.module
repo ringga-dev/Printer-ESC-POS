@@ -1,0 +1,144 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "url": "../../printer/1.0.0/printer-1.0.0.module",
+    "group": "io.github.ringga-dev",
+    "module": "printer",
+    "version": "1.0.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.14.3"
+    }
+  },
+  "variants": [
+    {
+      "name": "iosSimulatorArm64ApiElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-api",
+        "org.jetbrains.kotlin.native.target": "ios_simulator_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.3.20"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-coroutines-core",
+          "version": {
+            "requires": "1.10.2"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-datetime",
+          "version": {
+            "requires": "0.7.1"
+          }
+        },
+        {
+          "group": "io.github.aakira",
+          "module": "napier",
+          "version": {
+            "requires": "2.7.1"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "printer-iosSimulatorArm64Main-1.0.0.klib",
+          "url": "printer-iossimulatorarm64-1.0.0.klib",
+          "size": 102063,
+          "sha512": "a5645c23fffaf8e67e939642bbb330885de20dc01586d2b396bf8a36f5a41c5a598fa584478bb2c60eb8082115ba0f7ec5d388fa821e02a4619bb7e2fe7b86b3",
+          "sha256": "3dea0a05099bbf205dd56b567e31be613bde4a541ccad1acf69b92853f17a9a4",
+          "sha1": "9588d3a84524e5a5996f5e710be02764e6453689",
+          "md5": "ae920682b750287a0e6dd9b3e0d69f69"
+        }
+      ]
+    },
+    {
+      "name": "iosSimulatorArm64SourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-runtime",
+        "org.jetbrains.kotlin.native.target": "ios_simulator_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "files": [
+        {
+          "name": "printer-iossimulatorarm64-1.0.0-sources.jar",
+          "url": "printer-iossimulatorarm64-1.0.0-sources.jar",
+          "size": 19961,
+          "sha512": "336b7edd133869485a45d62ae1b55b72723d7f879d9eaf681d974ed64d770e88d8a19dfcd1ebbbfade65aa3a95927a00d2ee43827a3602523ea7c06857cc8586",
+          "sha256": "277a21d3d3af0c760314bb84bf629200a1e15a1a413d0d9d3ea9fba85d159331",
+          "sha1": "57adf220f516de0364bc244b52b18fa109d21710",
+          "md5": "ef3473254d044718a24e1c5dc0929593"
+        }
+      ]
+    },
+    {
+      "name": "iosSimulatorArm64MetadataElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-metadata",
+        "org.jetbrains.kotlin.native.target": "ios_simulator_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.3.20"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-coroutines-core",
+          "version": {
+            "requires": "1.10.2"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-datetime",
+          "version": {
+            "requires": "0.7.1"
+          }
+        },
+        {
+          "group": "io.github.aakira",
+          "module": "napier",
+          "version": {
+            "requires": "2.7.1"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "printer-iossimulatorarm64-1.0.0-metadata.jar",
+          "url": "printer-iossimulatorarm64-1.0.0-metadata.jar",
+          "size": 3925,
+          "sha512": "e62d8b9ef473e2290c362009f88eab2dbf701ab2d79cfc9717483a97cd27373b52b267aa7d27454ea38aaf7188f7bb91e6d4c2001d5b7b0079449f8e19db7114",
+          "sha256": "e6fbfc85dca69e399ecb42aa75eb7cf3813781f16ec2779976b855f012f316f4",
+          "sha1": "aee9a1cb7133ec7ac54ee68d57903d49b803a1cc",
+          "md5": "27ab9378037016504280f1fd52492636"
+        }
+      ]
+    }
+  ]
+}

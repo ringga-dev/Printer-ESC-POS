@@ -2,6 +2,9 @@ plugins {
     kotlin("multiplatform")
     id("com.android.library")
     id("maven-publish")
+    id("signing")
+    // Dokka for professional Javadoc required by Maven Central
+    id("org.jetbrains.dokka") version "1.9.20"
 }
 
 group = "io.github.ringga-dev"
@@ -11,7 +14,7 @@ kotlin {
     androidTarget {
         publishLibraryVariants("release")
     }
-    
+
     listOf(
         iosArm64(),
         iosSimulatorArm64()
@@ -21,9 +24,9 @@ kotlin {
             isStatic = true
         }
     }
-    
+
     jvm()
-    
+
     sourceSets {
         commonMain.dependencies {
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
@@ -35,7 +38,7 @@ kotlin {
             implementation("androidx.appcompat:appcompat:1.7.0")
             implementation("com.google.android.material:material:1.12.0")
         }
-        
+
         jvmMain.dependencies {
             implementation("com.fazecast:jSerialComm:2.11.0")
             implementation("net.java.dev.jna:jna:5.14.0")
@@ -56,13 +59,28 @@ android {
     }
 }
 
+// Requirements for Maven Central: Sources Jar
+val kmpSourcesJar by tasks.registering(Jar::class) {
+    archiveClassifier.set("sources")
+    from(kotlin.sourceSets.getByName("commonMain").kotlin)
+}
+
+// Requirements for Maven Central: Javadoc Jar (using Dokka)
+val kmpJavadocJar by tasks.registering(Jar::class) {
+    archiveClassifier.set("javadoc")
+    from(tasks.named("dokkaHtml"))
+}
+
 publishing {
     publications {
         create<MavenPublication>("maven") {
             groupId = "io.github.ringga-dev"
             artifactId = "nggaprinter"
             version = "1.0.0"
-            
+
+            artifact(kmpSourcesJar)
+            artifact(kmpJavadocJar)
+
             pom {
                 name.set("NggaPrinter")
                 description.set("Professional Kotlin Multiplatform Thermal Printing Library for ESC/POS.")
@@ -87,5 +105,26 @@ publishing {
                 }
             }
         }
+    }
+
+    repositories {
+        maven {
+            name = "Sonatype"
+            // Using the modern S01 endpoint which is recommended for new Central Portal accounts
+            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+            credentials {
+                username = System.getenv("ORG_GRADLE_PROJECT_mavenCentralUsername")
+                password = System.getenv("ORG_GRADLE_PROJECT_mavenCentralPassword")
+            }
+        }
+    }
+}
+
+signing {
+    val signingKey = System.getenv("ORG_GRADLE_PROJECT_signingKey")
+    val signingPassword = System.getenv("ORG_GRADLE_PROJECT_signingPassword")
+    if (signingKey != null && signingPassword != null) {
+        useInMemoryPgpKeys(signingKey, signingPassword)
+        sign(publishing.publications["maven"])
     }
 }

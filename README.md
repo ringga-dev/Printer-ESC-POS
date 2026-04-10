@@ -1,10 +1,15 @@
 # 🖨️ NggaPrinter
 **The Ultimate Kotlin Multiplatform Thermal Printing Suite.**
 
-[![KMP](https://img.shields.io/badge/Kotlin-Multiplatform-blue?logo=kotlin)](https://kotlinlang.org/docs/multiplatform.html)
+![Build Status](https://github.com/ringga-dev/Printer-ESC-POS/actions/workflows/publish.yml/badge.svg)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![KMP](https://img.shields.io/badge/Kotlin-Multiplatform-blue?logo=kotlin)](https://kotlinlang.org/docs/multiplatform.html)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.ringga-dev/nggaprinter.svg)](https://central.sonatype.com/)
 
 NggaPrinter adalah library thermal printing ESC/POS yang dirancang untuk performa tinggi dan kemudahan integrasi di **Android, iOS, dan JVM (Desktop)**. Menggunakan arsitektur **Connector Pattern** yang terpadu, Anda dapat mengontrol berbagai merk printer thermal (Bluetooth, USB, Network) dengan satu standar kode yang sama.
+
+> [!TIP]
+> **Baru menggunakan KMP?** Lihat [Panduan Integrasi KMP](file:///d:/Android/project/Printer%20ESCPOS/KMP_GUIDE.md) untuk detail setup tiap platform.
 
 ---
 

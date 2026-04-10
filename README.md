@@ -1,5 +1,5 @@
 # 🖨️ NggaPrinter
-**The Ultimate Kotlin Multiplatform Thermal Printing Suite.**
+**The Ultimate Kotlin Multiplatform Thermal Printing Suite for Professionals.**
 
 **Languages:** **Bahasa Indonesia** | [English](./README_EN.md) | [简体中文](./README_ZH.md)
 
@@ -8,115 +8,85 @@
 [![KMP](https://img.shields.io/badge/Kotlin-Multiplatform-blue?logo=kotlin)](https://kotlinlang.org/docs/multiplatform.html)
 [![Release](https://img.shields.io/github/v/release/ringga-dev/Printer-ESC-POS?color=orange&logo=github)](https://github.com/ringga-dev/Printer-ESC-POS/releases)
 
+---
+
 NggaPrinter adalah library thermal printing ESC/POS yang dirancang untuk performa tinggi dan kemudahan integrasi di **Android, iOS, dan JVM (Desktop)**. Menggunakan arsitektur **Connector Pattern** yang terpadu, Anda dapat mengontrol berbagai merk printer thermal (Bluetooth, USB, Network) dengan satu standar kode yang sama.
 
-> [!TIP]
-> **Baru menggunakan KMP?** Lihat [Panduan Integrasi KMP](./KMP_GUIDE.md) atau cari binari siap pakai di halaman [Releases](https://github.com/ringga-dev/Printer-ESC-POS/releases).
+> [!IMPORTANT]
+> **Production Ready**: Library ini sudah dilengkapi dengan sistem **Auto-Release CI/CD**. Setiap update versi dijamin stabil dan binari (`.aar`, `.jar`, `.xcframework`) selalu tersedia di halaman rilis.
 
 ---
 
-## 📦 Latest Binaries
-Untuk Anda yang tidak ingin menggunakan dependency manager, Anda bisa langsung mendownload file `.aar` dan `.xcframework` dari halaman release kami:
+## 🚀 Fitur Unggulan (Why NggaPrinter?)
 
-👉 **[Download NggaPrinter v1.0.0](https://github.com/ringga-dev/Printer-ESC-POS/releases/latest)**
-
----
-
-## 🚀 Minimal Requirements
-Sebelum memulai, pastikan project Anda memenuhi persyaratan minimum berikut:
-
-*   **Kotlin**: 1.9.20 atau yang lebih baru.
-*   **Android**: 
-    *   Min SDK: **21** (Lollipop).
-    *   Target SDK: **34** (Android 14) direkomendasikan.
-    *   Izin: Bluetooth Scan, Connect, Fine Location (untuk discovery).
-*   **iOS**: 
-    *   Min iOS: **13.0**.
-    *   Persyaratan: Bluetooth LE (CoreBluetooth) capability.
-*   **JVM**: Java 11 atau yang lebih baru.
+| Fitur | Penjelasan | Status |
+| :--- | :--- | :---: |
+| **KMP Unified** | Satu kode untuk Android, iOS, dan Desktop. | ✅ |
+| **Safety Buffer** | Mencegah teks terpotong atau "tumpah" ke baris baru secara tidak sengaja. | ✅ |
+| **Floyd-Dithering** | Cetak gambar/logo dengan gradasi halus (bukan hitam-putih kasar). | ✅ |
+| **Auto-Calibration** | Alat bantu `printRuler()` untuk mencari lebar kertas (dots) yang presisi. | ✅ |
+| **Reactive Discovery** | Scan printer berbasis `Kotlin Flow` untuk UI yang responsif. | ✅ |
 
 ---
 
-## 📥 Installation
+## 📦 Pemasangan Cepat (v1.0.0)
 
-Kami menyediakan berbagai metode integrasi untuk memudahkan Anda, baik itu project KMP, Android Native, maupun iOS Native.
+Untuk integrasi yang paling detail dan profesional, silakan lihat panduan lengkap kami:
 
-👉 **[Lihat Panduan Instalasi Lengkap (INSTALLATION.md)](./INSTALLATION.md)**
+👉 **[PANDUAN INSTALASI & KMP MASTERCLASS](./INSTALLATION.md)**
 
-*   **Method A**: GitHub Maven Repo (Recommended for KMP)
-*   **Method B**: Manual Binary Download (AAR/XCFramework)
-*   **Method C**: Local Source Module
-
----
-
-## 🛠️ Quick Start
-
-### 1. Inisialisasi & Discovery
-Cari printer yang tersedia di sekitar (Bluetooth/USB/LAN):
-
+### Quick Snippet (Gradle KMP)
+1. **Repository Settings**:
 ```kotlin
-val printer = NggaPrinter()
-
-// Discovery via Flow (Reactive UI)
-printer.discovery("BLUETOOTH") { log ->
-    println("Status: $log")
-}.collect { devices ->
-    val myPrinter = devices.first()
+// settings.gradle.kts
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+        maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }
+    }
 }
 ```
 
-### 2. Membangun Perintah Cetak (Builder)
-Gunakan `ESCPosCommandBuilder` yang sudah dilengkapi dengan **Safety Wrap Buffer** (Mencegah teks tumpah ke baris baru).
+2. **Dependency**:
+```kotlin
+// commonMain
+implementation("io.github.ringga-dev:nggaprinter:1.0.0")
+```
+
+---
+
+## 🛠️ Contoh Kode Cepat
 
 ```kotlin
+val printer = NggaPrinter()
 val config = PrinterConfig(name = "MTP-II", connectionType = "BLUETOOTH", address = "00:11...")
 
 val commands = printer.newCommandBuilder(config)
     .initialize()
     .alignCenter()
     .setBold(true)
-    .line("TOKO MADJU JAYA")
+    .line("NGGA PRINTER STORE")
     .setBold(false)
     .divider()
-    // Tabel otomatis dengan sistem Weight (Rasio kolom)
-    .tableRow(listOf("Kopi Susu", "2x", "Rp 40.000"), listOf(2, 1, 1))
-    .tableRow(listOf("Roti Bakar", "1x", "Rp 15.000"), listOf(2, 1, 1))
+    .tableRow(listOf("Iced Coffee", "2x", "Rp 40.000"), listOf(2, 1, 1))
     .divider()
     .alignRight()
-    .line("TOTAL: Rp 55.000")
+    .line("TOTAL: Rp 40.000")
     .feed(3)
     .cutPaper()
     .build()
 
-// Kirim ke printer
+// Kirim ke printer dengan Flow status
 printer.printRaw(config, commands).collect { status ->
-    if (status is PrintStatus.Success) println("Berhasil")
+    if (status is PrintStatus.Success) println("Berhasil dicetak!")
 }
 ```
 
 ---
 
-## 🌟 Fitur Unggulan Profesional
-
-### 1. Hardware Calibration (Ruler)
-Printer thermal memiliki variasi lebar *dots* yang berbeda-beda. NggaPrinter menyediakan alat kalibrasi:
-```kotlin
-builder.printRuler() // Mencetak penggaris dots (0, 50, 100...) di kertas fisik
-```
-Hasil cetakan ini membantu Anda menentukan `paperWidthDots` yang paling presisi untuk hardware Anda.
-
-### 2. Image Dithering
-Cetak logo atau foto dengan hasil yang lebih halus menggunakan algoritma **Floyd-Steinberg Dithering** bawaan, bukan sekadar hitam-putih kasar.
-
-### 3. Safety Layout Logic
-Semua fungsi layout (`tableRow`, `segmentedLine`, `centeredText`) secara otomatis memberikan **Safety Buffer** 1 karakter di akhir baris. Ini menjamin printer tidak akan melakukan "Auto-Enter" yang merusak estetika struk Anda.
-
----
-
-## 🔒 Permissions Policy
+## 🔒 Kebijakan Izin (Permissions)
 
 ### Android
-Tambahkan ke `AndroidManifest.xml`:
 ```xml
 <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
 <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
@@ -124,12 +94,14 @@ Tambahkan ke `AndroidManifest.xml`:
 ```
 
 ### iOS
-Tambahkan ke `Info.plist`:
-```xml
-<key>NSBluetoothAlwaysUsageDescription</key>
-<string>Dibutuhkan untuk mencari dan menghubungkan ke printer bluetooth.</string>
-```
+Tambahkan `NSBluetoothAlwaysUsageDescription` ke `Info.plist` Anda.
 
 ---
 
+## 📖 Dokumentasi Lanjut
+*   [Panduan Arsitektur & KMP Guide](./KMP_GUIDE.md)
+*   [Contoh Kode & Sampel Struk](./DOCS_AND_SAMPLE.md)
+*   [Kontribusi & Lisensi](./CONTRIBUTING.md)
+
+---
 Developed with ❤️ by **Ringga**

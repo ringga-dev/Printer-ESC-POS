@@ -1,124 +1,92 @@
 # 🖨️ NggaPrinter
-**终极 Kotlin 多平台热敏打印套件。**
+**专为专业人士打造的终极 Kotlin 多平台热敏打印套件。**
 
 **语言:** [Bahasa Indonesia](./README.md) | [English](./README_EN.md) | **简体中文**
 
-![构建状态](https://github.com/ringga-dev/Printer-ESC-POS/actions/workflows/publishgithub.yml/badge.svg)
-[![许可证](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+![Build Status](https://github.com/ringga-dev/Printer-ESC-POS/actions/workflows/publishgithub.yml/badge.svg)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![KMP](https://img.shields.io/badge/Kotlin-Multiplatform-blue?logo=kotlin)](https://kotlinlang.org/docs/multiplatform.html)
-[![版本](https://img.shields.io/github/v/release/ringga-dev/Printer-ESC-POS?color=orange&logo=github)](https://github.com/ringga-dev/Printer-ESC-POS/releases)
-
-**语言:** [Bahasa Indonesia](./README.md) | [English](./README_EN.md) | **简体中文**
-
-NggaPrinter 是一款高性能的 ESC/POS 热敏打印库，旨在简化 **Android、iOS 和 JVM (Desktop)** 平台的集成。通过统一的 **连接器模式 (Connector Pattern)** 架构，您可以使用一套标准化的代码控制各种品牌的热敏打印机（蓝牙、USB、网络）。
-
-> [!TIP]
-> **初次接触 KMP？** 请参阅 [KMP 集成指南](./KMP_GUIDE.md) 或在 [发布 (Releases)](https://github.com/ringga-dev/Printer-ESC-POS/releases) 页面查找即插即用的二进制文件。
+[![Release](https://img.shields.io/github/v/release/ringga-dev/Printer-ESC-POS?color=orange&logo=github)](https://github.com/ringga-dev/Printer-ESC-POS/releases)
 
 ---
 
-## 📦 最新二进制文件
-如果您不想使用依赖管理器，可以直接从我们的发布页面下载 `.aar` 和 `.xcframework` 文件：
+NggaPrinter 是一款高性能的 ESC/POS 热敏打印库，旨在轻松集成到 **Android、iOS 和 JVM (Desktop)**。 凭借统一的 **Connector Pattern** 架构，您可以使用一套标准代码控制各种品牌的热敏打印机（蓝牙、USB、网络）。
 
-👉 **[下载 NggaPrinter v1.0.0](https://github.com/ringga-dev/Printer-ESC-POS/releases/latest)**
-
----
-
-## 📥 安装
-
-我们提供多种集成方式以满足您的需求，无论是 KMP 项目、原生 Android 还是原生 iOS。
-
-👉 **[查看完整安装指南 (INSTALLATION_ZH.md)](./INSTALLATION_ZH.md)**
-
-*   **方法 A**: GitHub Maven 仓库（KMP 项目推荐）
-*   **方法 B**: 手动二进制下载 (AAR/XCFramework)
-*   **方法 C**: 本地源码模块
+> [!IMPORTANT]
+> **生产就绪**: 该库通过 **Auto-Release CI/CD** 流水线提供支持。 每个版本的更新都经过稳定性保证，且二进制文件（`.aar`、`.jar`、`.xcframework`）始终可以在发布页面下载。
 
 ---
 
-## 🚀 最低配置要求
-在开始之前，请确保您的项目满足以下要求：
+## 🚀 核心特性 (为什么选择 NggaPrinter?)
 
-*   **Kotlin**: 1.9.20 或更高版本。
-*   **Android**: 
-    *   最低 SDK: **21** (Lollipop)。
-    *   建议目标 SDK: **34** (Android 14)。
-    *   权限: 蓝牙扫描、连接、精确位置（用于设备发现）。
-*   **iOS**: 
-    *   最低 iOS 版本: **13.0**。
-    *   硬件要求: 需支持低功耗蓝牙 (BLE/CoreBluetooth)。
-*   **JVM**: Java 11 或更高版本。
+| 特性 | 说明 | 状态 |
+| :--- | :--- | :---: |
+| **KMP 统一** | 一套代码支持 Android, iOS, 和 Desktop。 | ✅ |
+| **安全缓冲区** | 自动防止文本截断或不必要的自动换行。 | ✅ |
+| **Floyd 抖动算法** | 以平滑的渐变色打印图像/Logo（非粗糙黑白）。 | ✅ |
+| **自动校准** | 内置 `printRuler()` 工具，寻找精确的打印点宽。 | ✅ |
+| **响应式扫描** | 基于 `Kotlin Flow` 的打印机扫描，适用于响应式 UI。 | ✅ |
 
 ---
 
-## 🛠️ 快速上手
+## 📦 快速安装 (v1.0.0)
 
-### 1. 初始化与设备发现
-查找可用的打印机（蓝牙/USB/局域网）：
+如需查看最详尽、最专业的集成指南，请访问：
 
+👉 **[安装指南与 KMP 专家课程](./INSTALLATION_ZH.md)**
+
+### 快速代码片段 (Gradle KMP)
+1. **仓库设置**:
 ```kotlin
-val printer = NggaPrinter()
-
-// 通过 Flow 进行发现 (响应式 UI)
-printer.discovery("BLUETOOTH") { log ->
-    println("状态: $log")
-}.collect { devices ->
-    val myPrinter = devices.first()
+// settings.gradle.kts
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+        maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }
+    }
 }
 ```
 
-### 2. 构建打印指令 (Builder)
-使用配备 **安全换行缓冲 (Safety Wrap Buffer)** 的 `ESCPosCommandBuilder`（防止文本溢出到新行）。
+2. **依赖配置**:
+```kotlin
+// commonMain
+implementation("io.github.ringga-dev:nggaprinter:1.0.0")
+```
+
+---
+
+## 🛠️ 快速使用示例
 
 ```kotlin
+val printer = NggaPrinter()
 val config = PrinterConfig(name = "MTP-II", connectionType = "BLUETOOTH", address = "00:11...")
 
 val commands = printer.newCommandBuilder(config)
     .initialize()
     .alignCenter()
     .setBold(true)
-    .line("NGGA 打印机商店")
+    .line("NGGA PRINTER STORE")
     .setBold(false)
     .divider()
-    // 自动表格系统 (使用权重/列比例)
-    .tableRow(listOf("冰咖啡", "2x", "¥ 28.00"), listOf(2, 1, 1))
-    .tableRow(listOf("吐司", "1x", "¥ 12.00"), listOf(2, 1, 1))
+    .tableRow(listOf("冰咖啡", "2x", "¥ 40.00"), listOf(2, 1, 1))
     .divider()
     .alignRight()
-    .line("总计: ¥ 40.00")
+    .line("合计: ¥ 40.00")
     .feed(3)
     .cutPaper()
     .build()
 
-// 发送到打印机
+// 使用基于 Flow 的状态跟踪进行打印
 printer.printRaw(config, commands).collect { status ->
-    if (status is PrintStatus.Success) println("打印成功")
+    if (status is PrintStatus.Success) println("打印成功！")
 }
 ```
-
----
-
-## 🌟 专业特性
-
-### 1. 硬件校准 (Ruler)
-热敏打印机的点宽各不相同。NggaPrinter 提供了一个校准工具：
-```kotlin
-builder.printRuler() // 在物理纸张上打印刻度尺 (0, 50, 100...)
-```
-这有助于您为具体的硬件确定最精确的 `paperWidthDots`（纸张点宽）。
-
-### 2. 图像抖动 (Dithering)
-使用内置的 **Floyd-Steinberg 抖动算法** 打印徽标或照片，效果比粗糙的黑白转换更平滑。
-
-### 3. 安全布局逻辑
-所有布局函数（`tableRow`、`segmentedLine`、`centeredText`）在行尾都会自动包含 **1 个字符的安全缓冲**。这保证了打印机不会触发破坏收据美感的“自动回车”。
 
 ---
 
 ## 🔒 权限策略
 
 ### Android
-在 `AndroidManifest.xml` 中添加：
 ```xml
 <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
 <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
@@ -126,12 +94,14 @@ builder.printRuler() // 在物理纸张上打印刻度尺 (0, 50, 100...)
 ```
 
 ### iOS
-在 `Info.plist` 中添加：
-```xml
-<key>NSBluetoothAlwaysUsageDescription</key>
-<string>此应用需要蓝牙权限以扫描并连接热敏打印机。</string>
-```
+请在 `Info.plist` 中添加 `NSBluetoothAlwaysUsageDescription` 描述。
 
 ---
 
-由 **Ringga** 精心打造 ❤️
+## 📖 深度探索
+*   [架构与 KMP 设计指南](./KMP_GUIDE.md)
+*   [代码示例与小票模板](./DOCS_AND_SAMPLE.md)
+*   [贡献与许可](./CONTRIBUTING.md)
+
+---
+Developed with ❤️ by **Ringga**

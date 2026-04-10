@@ -1,35 +1,86 @@
-# 📥 Installation Guide
+# 📥 Installation Guide & KMP Masterclass
 
-Choose one of the following three methods to integrate **NggaPrinter** into your application.
+Welcome to the **NggaPrinter** deep-dive integration guide. This document is designed to help you integrate this library into your Kotlin Multiplatform (KMP) project with professional-grade standards.
 
 ---
 
 ## 🟢 Option 1: GitHub Maven Repo (Recommended)
-This method is the most practical for **Kotlin Multiplatform (KMP)** projects. No manual file downloads required; just add the Gradle config.
+This is the most modern and "cleanest" way to integrate for **Kotlin Multiplatform (KMP)** projects.
 
-### 1. Add Repository
-Open your `settings.gradle.kts` (or root `build.gradle.kts`):
+### 1. Repository Configuration
+Open your root `settings.gradle.kts` file. We highly recommend using `dependencyResolutionManagement` to grant automatic access across all modules.
 
 ```kotlin
+// settings.gradle.kts
 dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
-        // Add this link
+        // 🚀 NggaPrinter Professional Distribution Path
         maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }
     }
 }
 ```
 
-### 2. Add Dependency
-In your project's `commonMain` module dependencies:
+### 2. Dependency Declaration
+Open the `build.gradle.kts` file of your target module (usually `:shared` or `:composeApp`). Add the library to the `commonMain` sourceSet to make the printer available across Android, iOS, and Desktop simultaneously.
 
 ```kotlin
+// build.gradle.kts (:shared or :composeApp)
 kotlin {
     sourceSets {
         commonMain.dependencies {
+            // Use stable version 1.0.0 (No 'v' prefix)
             implementation("io.github.ringga-dev:nggaprinter:1.0.0")
         }
+    }
+}
+```
+
+> [!TIP]
+> **Important**: Always use version `1.0.0` in your Gradle code. The `v` character is only used for Git Tag labels on GitHub, not for Maven artifact IDs.
+
+---
+
+## 🛠️ Platform Configuration (Required)
+
+To ensure the printer discovery features work correctly, you must add the following permissions to your main application:
+
+### 🤖 Android (AndroidManifest.xml)
+Ensure you handle runtime permissions if targeting Android 12+.
+```xml
+<uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" /> <!-- Required for Bluetooth Discovery -->
+<uses-permission android:name="android.permission.INTERNET" /> <!-- For Network Printers -->
+```
+
+### 🍎 iOS (Info.plist)
+Add a Bluetooth usage description to avoid Apple store rejection:
+```xml
+<key>NSBluetoothAlwaysUsageDescription</key>
+<string>This app requires Bluetooth access to print transaction receipts.</string>
+```
+
+---
+
+## ⚡ Usage in KMP (Shared) Module
+
+If you wish to use NggaPrinter inside your `shared` (Business Logic) module, follow this pattern:
+
+```kotlin
+// Inside CommonMain (Shared Kotlin Library)
+class ReceiptManager {
+    private val printer = NggaPrinter() // Unified platform initialization
+
+    suspend fun printReceipt(address: String) {
+        val config = PrinterConfig(
+            name = "Thermal Printer",
+            connectionType = "BLUETOOTH",
+            address = address
+        )
+        // Implement your printing logic here...
     }
 }
 ```
@@ -37,35 +88,21 @@ kotlin {
 ---
 
 ## 🔵 Option 2: Binary Release (Manual)
-If you prefer to download `.aar` or `.xcframework` files manually without using a dependency manager.
+Use this if you have a pure Native project (Swift-only or Kotlin Android-only).
 
-1.  Go to the **[Releases](https://github.com/ringga-dev/Printer-ESC-POS/releases)** page.
-2.  Download the files:
-    -   `NggaPrinter.aar` (For Android).
-    -   `NggaPrinter.xcframework.zip` (For iOS).
-3.  **Android**: Place the `.aar` in the `libs` folder and add `implementation(files("libs/NggaPrinter.aar"))`.
-4.  **iOS**: Unzip and drag the `.xcframework` folder into your Xcode project under "Frameworks, Libraries, and Embedded Content".
+1.  Visit the [Releases Page](https://github.com/ringga-dev/Printer-ESC-POS/releases).
+2.  Download the `.aar` (Android) or `.xcframework.zip` (iOS) file.
+3.  **Android**: Place in `libs` folder -> `implementation(files("libs/nggaprinter.aar"))`.
+4.  **iOS**: Drag the Framework into Xcode -> **Frameworks, Libraries, and Embedded Content**.
 
 ---
 
-## ⚪ Option 3: Local Module (Source)
-Use this method if you wish to modify the library source code directly.
+## ⚪ Option 3: Local Module (Source Code)
+Use this if you need to modify the internal logic of NggaPrinter.
 
-1.  Copy the `/printer` folder from this repository to your project's root directory.
-2.  Add it to `settings.gradle.kts`:
-    ```kotlin
-    include(":printer")
-    ```
-3.  Implement it in your `build.gradle.kts`:
-    ```kotlin
-    commonMain.dependencies {
-        implementation(project(":printer"))
-    }
-    ```
+1.  Copy the `/printer` folder into your project.
+2.  Register in `settings.gradle.kts`: `include(":printer")`.
+3.  Implement locally: `implementation(project(":printer"))`.
 
 ---
-
-## ❓ Which one should I choose?
--   Choose **Option 1** if you want easy automatic version updates.
--   Choose **Option 2** if your project is pure Android (Native) or pure iOS (Native Swift) and you don't want to use KMP Gradle.
--   Choose **Option 3** if you are a contributor or want to implement custom logic in the core library.
+Developed with ❤️ by **Ringga**

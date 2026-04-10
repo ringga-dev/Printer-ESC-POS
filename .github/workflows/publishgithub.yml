@@ -152,46 +152,59 @@ jobs:
           name: sonatype-central-bundle
           path: SonatypeCentralBundle.zip
 
-  # 7. Final: Create GitHub Release
+  # 7. Final: Create GitHub Release (AUTO-RELEASE)
   create-release:
     name: Create GitHub Release
-    needs: [setup, build-android, build-ios, build-jvm]
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [setup, build-android, build-ios, build-jvm, publish-sonatype-bundle]
     runs-on: ubuntu-latest
     steps:
-      - name: Download Artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: release_artifacts
-      
-      - name: Create Release Page
+
+      - name: Create / Update Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ needs.setup.outputs.lib_version }}
+          name: "Release v${{ needs.setup.outputs.lib_version }}"
           files: |
             release_artifacts/nggaprinter-aar/*
             release_artifacts/nggaprinter-xcframework/*
             release_artifacts/nggaprinter-jvm/*
             release_artifacts/sonatype-central-bundle/*
-          name: Release ${{ needs.setup.outputs.lib_version }}
           body: |
-            ## 📦 Release v${{ needs.setup.outputs.lib_version }}
+            ## 🚀 NggaPrinter v${{ needs.setup.outputs.lib_version }}
             
-            ### Compiled Binaries
-            - **Android**: `printer-release.aar`
-            - **iOS**: `NggaPrinter.xcframework.zip`
-            - **JVM (Desktop)**: `printer-jvm-*.jar`
-            
-            ### 🚀 Distribution
-            
-            #### 1. GitHub Maven (Recommended)
-            Add to `settings.gradle.kts`:
+            Professional Kotlin Multiplatform Thermal Printing Library. 
+            This release is automatically generated and includes all compiled binaries.
+
+            ### 📦 Compiled Assets
+            - **Android**: Native AAR for Android Studio
+            - **iOS**: XCFramework for Xcode / SPM
+            - **JVM**: JAR for Desktop / Server
+            - **Sonatype Central**: Bundle for Maven Central publication
+
+            ### 🛠️ Integration (GitHub Maven)
+            Add to your `settings.gradle.kts`:
             ```kotlin
-            maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }
+            dependencyResolutionManagement {
+                repositories {
+                    maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }
+                }
+            }
             ```
-            
-            #### 2. Sonatype Central
-            A **Sonatype Central Bundle** has been attached to this release for manual upload to [central.sonatype.com](https://central.sonatype.com).
+
+            Then in your module:
+            ```kotlin
+            implementation("io.github.ringga-dev:nggaprinter:v${{ needs.setup.outputs.lib_version }}")
+            ```
+
+            ### 📖 Documentation
+            Check the updated [INSTALLATION.md](https://github.com/ringga-dev/Printer-ESC-POS/blob/master/INSTALLATION.md) for full guide.
           draft: false
           prerelease: false
+          make_latest: true
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

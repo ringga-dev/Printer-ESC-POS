@@ -1,9 +1,10 @@
 package ngga.ring.printer.manager
 
 import android.annotation.SuppressLint
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothSocket
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothSocket
+import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import ngga.ring.printer.model.PrinterConfig
@@ -18,8 +19,11 @@ class AndroidBluetoothConnector : PrinterConnector {
     private val SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
 
     override suspend fun connect(config: PrinterConfig): Boolean = withContext(Dispatchers.IO) {
+        val context = PrinterInitializer.getContext()
+        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val adapter = bluetoothManager.adapter ?: return@withContext false
+        
         try {
-            val adapter = BluetoothAdapter.getDefaultAdapter() ?: return@withContext false
             val device = adapter.getRemoteDevice(config.address ?: return@withContext false)
             
             // Cancel discovery as it slows down connection
@@ -31,7 +35,6 @@ class AndroidBluetoothConnector : PrinterConnector {
         } catch (e: Exception) {
             // Fallback for some devices that require reflection
             try {
-                val adapter = BluetoothAdapter.getDefaultAdapter()
                 val device = adapter.getRemoteDevice(config.address)
                 val m = device.javaClass.getMethod("createRfcommSocket", Int::class.javaPrimitiveType)
                 socket = m.invoke(device, 1) as BluetoothSocket

@@ -21,7 +21,8 @@ class AndroidBleConnector(private val context: Context) : PrinterConnector {
     private val PRINTER_WRITE_UUID = UUID.fromString("0000ff01-0000-1000-8000-00805f9b34fb")
 
     override suspend fun connect(config: PrinterConfig): Boolean = withContext(Dispatchers.IO) {
-        val adapter = BluetoothAdapter.getDefaultAdapter() ?: return@withContext false
+        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val adapter = bluetoothManager.adapter ?: return@withContext false
         val device = adapter.getRemoteDevice(config.address ?: return@withContext false)
         
         val success = suspendCancellableCoroutine<Boolean> { continuation ->

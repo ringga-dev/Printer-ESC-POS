@@ -7,6 +7,9 @@ on:
     tags:
       - 'v*'  # Trigger on tags for official releases
 
+permissions:
+  contents: write
+
 jobs:
   # 1. Setup & Version Extraction
   setup:
@@ -22,7 +25,7 @@ jobs:
           VERSION=$(grep 'LIB_VERSION=' gradle.properties | cut -d'=' -f2)
           echo "LIB_VERSION=$VERSION" >> $GITHUB_OUTPUT
 
-  # 2. Build Android AAR (Always runs)
+  # 2. Build Android AAR (Critical)
   build-android:
     name: Build Android
     needs: setup
@@ -44,7 +47,7 @@ jobs:
           name: nggaprinter-aar
           path: printer/build/outputs/aar/printer-release.aar
 
-  # 3. Build iOS XCFramework (Always runs)
+  # 3. Build iOS XCFramework (Critical)
   build-ios:
     name: Build iOS
     needs: setup
@@ -70,12 +73,11 @@ jobs:
           name: nggaprinter-xcframework
           path: NggaPrinter.xcframework.zip
 
-  # 4. Independent Publishing: GitHub Maven Repo
+  # 4. GitHub Channel: Maven Repo Branch (Self-Hosted)
   publish-github-maven:
     name: Publish to GitHub Repo
     needs: setup
     runs-on: ubuntu-latest
-    if: success()
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -98,13 +100,13 @@ jobs:
           user_email: 'github-actions[bot]@users.noreply.github.com'
           commit_message: "Publish version ${{ needs.setup.outputs.lib_version }}"
 
-  # 5. Independent Publishing: Maven Central (Sonatype)
-  # This uses "continue-on-error" so a Sonatype failure doesn't stop the GitHub release
-  publish-sonatype:
-    name: Publish to Maven Central
+  # 5. Sonatype Central Channel: Bundle Preparation
+  # This job is independent and uses "continue-on-error" to never block GitHub Releases
+  publish-sonatype-bundle:
+    name: Create Sonatype Bundle
     needs: setup
-    runs-on: macos-latest
-    continue-on-error: true 
+    runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -114,54 +116,59 @@ jobs:
           cache: 'gradle'
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-      - name: Publish to Remote
+      - name: Build Local Deployment
         env:
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_USERNAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_PASSWORD }}
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASSWORD }}
-        run: ./gradlew :printer:publish --no-daemon
+        run: ./gradlew :printer:publishAllPublicationsToLocalRepoRepository --no-daemon
+      - name: Create Bundle ZIP
+        run: |
+          cd build/repo
+          zip -r ../../SonatypeCentralBundle.zip .
+      - name: Upload Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonatype-central-bundle
+          path: SonatypeCentralBundle.zip
 
-  # 6. Final Job: Create GitHub Release (Collects binaries)
-  # Only triggers on Tags
+  # 6. Final: Create GitHub Release
+  # Dependent only on Build success, NOT on Sonatype
   create-release:
     name: Create GitHub Release
     needs: [setup, build-android, build-ios]
     if: startsWith(github.ref, 'refs/tags/v') && needs.setup.result == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: Download Android Artifact
+      - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: nggaprinter-aar
           path: release_artifacts
-        continue-on-error: true
-
-      - name: Download iOS Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: nggaprinter-xcframework
-          path: release_artifacts
-        continue-on-error: true
-
+      
       - name: Create Release Page
         uses: softprops/action-gh-release@v2
         with:
-          files: release_artifacts/*
+          files: |
+            release_artifacts/nggaprinter-aar/*
+            release_artifacts/nggaprinter-xcframework/*
+            release_artifacts/sonatype-central-bundle/*
           name: Release ${{ needs.setup.outputs.lib_version }}
           body: |
             ## 📦 Release v${{ needs.setup.outputs.lib_version }}
             
-            This release includes compiled binaries for manual integration.
+            ### Compiled Binaries
+            - **Android**: `printer-release.aar`
+            - **iOS**: `NggaPrinter.xcframework.zip`
             
-            - **Android AAR**: For native Android projects.
-            - **iOS XCFramework**: For native iOS/Swift projects.
+            ### 🚀 Distribution
             
-            ### Integration (GitHub Maven)
-            Add this to your `settings.gradle.kts`:
+            #### 1. GitHub Maven (Recommended)
+            Add to `settings.gradle.kts`:
             ```kotlin
             maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }
             ```
+            
+            #### 2. Sonatype Central
+            A **Sonatype Central Bundle** has been attached to this release for manual upload to [central.sonatype.com](https://central.sonatype.com).
           draft: false
           prerelease: false
         env:

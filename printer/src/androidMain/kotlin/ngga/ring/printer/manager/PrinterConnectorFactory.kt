@@ -1,11 +1,14 @@
 package ngga.ring.printer.manager
 
-import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
-import android.content.Context
+import android.bluetooth.BluetoothManager
 import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.ConnectivityManager
+import android.net.LinkProperties
+import android.os.Build
 import android.hardware.usb.UsbManager
 import ngga.ring.printer.model.*
 import kotlinx.coroutines.Dispatchers
@@ -60,7 +63,8 @@ actual class PrinterConnectorFactory {
     }
 
     private fun bluetoothDiscovery(config: DiscoveryConfig, onLog: (String) -> Unit): Flow<List<DiscoveredPrinter>> = callbackFlow {
-        val adapter = BluetoothAdapter.getDefaultAdapter()
+        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val adapter = bluetoothManager.adapter
         val discoveredDevices = Collections.synchronizedSet(mutableSetOf<DiscoveredPrinter>())
 
         if (config.showVirtualDevices) {
@@ -89,7 +93,12 @@ actual class PrinterConnectorFactory {
             override fun onReceive(context: Context?, intent: Intent?) {
                 when (intent?.action) {
                     BluetoothDevice.ACTION_FOUND -> {
-                        val device: BluetoothDevice? = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+                        val device: BluetoothDevice? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
+                        } else {
+                            @Suppress("DEPRECATION")
+                            intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+                        }
                         device?.let {
                             discoveredDevices.add(DiscoveredPrinter(
                                 name = it.name ?: "Unknown Device",
@@ -137,30 +146,46 @@ actual class PrinterConnectorFactory {
         }
         
         try {
-            val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
-            val ipAddress = wifiManager.connectionInfo.ipAddress
-            if (ipAddress != 0) {
-                val a = (ipAddress shr 0) and 0xFF
-                val b = (ipAddress shr 8) and 0xFF
-                val c = (ipAddress shr 16) and 0xFF
-                val baseSubnet = "$a.$b.$c"
-                
-                for (i in 1..254) {
-                    launch {
-                        val host = "$baseSubnet.$i"
-                        if (isPortOpen(host, 9100, config.networkScanTimeoutMs)) {
-                            synchronized(discovered) {
-                                if (discovered.none { it.address == host }) {
-                                    discovered.add(DiscoveredPrinter("Printer ($host)", "NETWORK", host, 9100))
+            val ipAddress = getLocalIpAddress()
+            if (ipAddress != null) {
+                val parts = ipAddress.split(".")
+                if (parts.size == 4) {
+                    val baseSubnet = "${parts[0]}.${parts[1]}.${parts[2]}"
+                    
+                    for (i in 1..254) {
+                        launch {
+                            val host = "$baseSubnet.$i"
+                            if (isPortOpen(host, 9100, config.networkScanTimeoutMs)) {
+                                synchronized(discovered) {
+                                    if (discovered.none { it.address == host }) {
+                                        discovered.add(DiscoveredPrinter("Printer ($host)", "NETWORK", host, 9100))
+                                    }
                                 }
+                                send(discovered.toList())
                             }
-                            send(discovered.toList())
                         }
                     }
                 }
             }
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            onLog("Network scan error: ${e.message}")
+        }
     }.flowOn(Dispatchers.IO)
+
+    private fun getLocalIpAddress(): String? {
+        try {
+            val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val activeNetwork = connectivityManager.activeNetwork
+            val linkProperties = connectivityManager.getLinkProperties(activeNetwork)
+            linkProperties?.linkAddresses?.forEach { linkAddress ->
+                val address = linkAddress.address
+                if (!address.isLoopbackAddress && address is java.net.Inet4Address) {
+                    return address.hostAddress
+                }
+            }
+        } catch (e: Exception) {}
+        return null
+    }
 
     private fun isPortOpen(host: String, port: Int, timeout: Int): Boolean {
         return try {

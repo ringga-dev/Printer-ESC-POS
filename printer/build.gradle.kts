@@ -140,15 +140,6 @@ publishing {
 
     repositories {
         maven {
-            name = "Sonatype"
-            // Using the modern S01 endpoint which is recommended for new Central Portal accounts
-            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-            credentials {
-                username = System.getenv("ORG_GRADLE_PROJECT_mavenCentralUsername")
-                password = System.getenv("ORG_GRADLE_PROJECT_mavenCentralPassword")
-            }
-        }
-        maven {
             name = "LocalRepo"
             url = uri("${rootProject.projectDir}/build/repo")
         }

@@ -36,11 +36,11 @@
         {
           "name": "printer-release.aar",
           "url": "printer-android-1.0.0.aar",
-          "size": 135883,
-          "sha512": "f878ade76d38fae44e1e86d69a796e79024799b4b380bbb059bf197ebc616d00ca57408f57538e91f7b6565eb53e51fb841eeddceebb79a6d536a9dad20c1d03",
-          "sha256": "6ecea638ed0c42c5117054a10e39245dbb33a3dd8bb9061da61707e490309796",
-          "sha1": "354dd237c35fa62d3d614c410f36525f44a22cce",
-          "md5": "49e52314d93d0f84d4701b024047b076"
+          "size": 137473,
+          "sha512": "3b22adce476dea74a711c5a14f87c9e2ab9d55fd4dcea6954ec48887ac665e7cf55333ab42d4c64ecc9a7c6890ccf0bfc80d509b05ed64651472a3b3c6413624",
+          "sha256": "714a23be6f68d25f8c0b33ee1026dadf36faf99301d3da784cc255b3f92dad09",
+          "sha1": "d3a5b8601001596506bf8057f1a03757fa3f9a3b",
+          "md5": "ff595b329329a37ee99a3d91628a0459"
         }
       ]
     },
@@ -184,11 +184,11 @@
         {
           "name": "printer-release.aar",
           "url": "printer-android-1.0.0.aar",
-          "size": 135883,
-          "sha512": "f878ade76d38fae44e1e86d69a796e79024799b4b380bbb059bf197ebc616d00ca57408f57538e91f7b6565eb53e51fb841eeddceebb79a6d536a9dad20c1d03",
-          "sha256": "6ecea638ed0c42c5117054a10e39245dbb33a3dd8bb9061da61707e490309796",
-          "sha1": "354dd237c35fa62d3d614c410f36525f44a22cce",
-          "md5": "49e52314d93d0f84d4701b024047b076"
+          "size": 137473,
+          "sha512": "3b22adce476dea74a711c5a14f87c9e2ab9d55fd4dcea6954ec48887ac665e7cf55333ab42d4c64ecc9a7c6890ccf0bfc80d509b05ed64651472a3b3c6413624",
+          "sha256": "714a23be6f68d25f8c0b33ee1026dadf36faf99301d3da784cc255b3f92dad09",
+          "sha1": "d3a5b8601001596506bf8057f1a03757fa3f9a3b",
+          "md5": "ff595b329329a37ee99a3d91628a0459"
         }
       ]
     },
@@ -207,11 +207,11 @@
         {
           "name": "printer-android-1.0.0-sources.jar",
           "url": "printer-android-1.0.0-sources.jar",
-          "size": 25941,
-          "sha512": "74fb94627c5514c8475e6f946b44ed65dcdf20d41dac74ce8d6afa74a716cb5bad6e244715536f0e9860d52cf401e3c754c7d597277403e57499efc16f0ee4a5",
-          "sha256": "e3cd869942537e020cbb8bc41f571ab8409a0e970add98d4349ab9efa064524b",
-          "sha1": "f0be242008436445bf4c6e2cc5d3bd7e85f7ad6e",
-          "md5": "4ab1e78f6cd709038221b7f363a8b806"
+          "size": 26307,
+          "sha512": "0580251a193a7f46617def4f8550bdfaafe9bacb6345178a7731814887e00036c91c1429a6e266b8843e8a1ed07aac0386f8ae0eefa7149feef87a32de56f0d3",
+          "sha256": "e3e7bbf462e4f23985c19e05862bd5185d8e5e2c14f1210979203c22fa777fe8",
+          "sha1": "e26017823a7eda890b930e395d4b651d41dd5e06",
+          "md5": "f0d1bda7da337a45133a80055b634c1b"
         }
       ]
     }

@@ -88,13 +88,17 @@ val kmpSourcesJar by tasks.registering(Jar::class) {
 }
 
 // Requirements for Maven Central: Javadoc Jar (using Dokka)
+tasks.named("dokkaHtml") {
+    // Temporarily disabled due to internal bug: "not array: KClass<out Annotation>"
+    // This is a known incompatibility in current Kotlin/Dokka versions.
+    enabled = false 
+}
+
 val kmpJavadocJar by tasks.registering(Jar::class) {
     archiveClassifier.set("javadoc")
-    try {
+    // If dokkaHtml is disabled or fails, this JAR will just be empty
+    if (tasks.findByName("dokkaHtml")?.enabled == true) {
         from(tasks.named("dokkaHtml"))
-    } catch (e: Exception) {
-        // Fallback for when Dokka fails due to internal metadata bugs
-        // Allows the build to continue while we wait for a Dokka fix
     }
 }
 

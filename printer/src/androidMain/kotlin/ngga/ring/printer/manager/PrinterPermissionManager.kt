@@ -76,7 +76,7 @@ actual class PrinterPermissionManager {
     fun onPermissionResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         if (requestCode == 1001) {
             val allGranted = grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }
-            android.util.Log.d("NggaPrinter", "Permission result: $allGranted")
+            android.util.Log.d("KmpPrinter", "Permission result: $allGranted")
             permissionCallback?.invoke(allGranted)
             permissionCallback = null
         }

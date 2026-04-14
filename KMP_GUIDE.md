@@ -1,11 +1,11 @@
-# 📚 NggaPrinter: Pro KMP Integration Guide
+# 📚 KmpPrinter: Pro KMP Integration Guide
 
-Panduan ini akan membantu Anda mengintegrasikan **NggaPrinter** ke dalam project Kotlin Multiplatform (KMP) Anda dengan standar industri yang stabil dan terukur.
+Panduan ini akan membantu Anda mengintegrasikan **KmpPrinter** ke dalam project Kotlin Multiplatform (KMP) Anda dengan standar industri yang stabil dan terukur.
 
 ---
 
 ## 🏗️ 1. Arsitektur: 100% Shared Logic
-NggaPrinter menggunakan arsitektur **Connector-Bridge Pattern**. Artinya, hampir 99% logika pencetakan Anda (layout, tabel, gambar) berada di modul `commonMain`. 
+KmpPrinter menggunakan arsitektur **Connector-Bridge Pattern**. Artinya, hampir 99% logika pencetakan Anda (layout, tabel, gambar) berada di modul `commonMain`. 
 
 Anda tidak perlu menulis kode Swift di Xcode atau Java di modul Android secara terpisah untuk mencetak struk yang sama.
 
@@ -22,7 +22,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        // 🚀 Jalur Distribusi Resmi NggaPrinter
+        // 🚀 Jalur Distribusi Resmi KmpPrinter
         maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }
     }
 }
@@ -36,8 +36,8 @@ Tambahkan library ke dalam blok `commonMain` agar otomatis tersedia di semua pla
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            // Selalu gunakan versi rilisan stabil 1.0.0
-            implementation("io.github.ringga-dev:nggaprinter:1.0.0")
+            // Selalu gunakan versi rilisan stabil 1.0.1
+            implementation("io.github.ringga-dev:kmp_printer:1.0.1")
         }
     }
 }
@@ -72,7 +72,7 @@ Tambahkan deskripsi penggunaan Bluetooth di `iosApp/Info.plist` agar aplikasi An
 ### Inisialisasi Singleton
 ```kotlin
 // Inisialisasi otomatis mendeteksi platform (Android, iOS, atau JVM)
-val printer = NggaPrinter() 
+val printer = KmpPrinter() 
 ```
 
 ### Discovery Berbasis Flow

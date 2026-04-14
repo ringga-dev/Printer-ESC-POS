@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import ngga.ring.printer.NggaPrinter
+import ngga.ring.printer.KmpPrinter
 import ngga.ring.printer.manager.PrinterPermissionManager
 import ngga.ring.printer.model.*
 import ngga.ring.printer.util.ConnectionState
@@ -34,7 +34,7 @@ import ngga.ring.printer.util.ConnectionState
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun App() {
-    val printer = remember { NggaPrinter() }
+    val printer = remember { KmpPrinter() }
     val scope = rememberCoroutineScope()
     
     // Global Config State
@@ -139,7 +139,7 @@ fun GlassyTopBar(state: ConnectionState) {
     CenterAlignedTopAppBar(
         title = { 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("NggaPrinter Pro", fontWeight = FontWeight.Black, fontSize = 20.sp, letterSpacing = (-0.5).sp)
+                Text("KmpPrinter Pro", fontWeight = FontWeight.Black, fontSize = 20.sp, letterSpacing = (-0.5).sp)
                 ConnectionBadge(state)
             }
         },
@@ -286,7 +286,7 @@ fun PrinterCard(device: DiscoveredPrinter, isSelected: Boolean, onClick: () -> U
 }
 
 @Composable
-fun ReceiptStudio(printer: NggaPrinter, config: PrinterConfig, scope: kotlinx.coroutines.CoroutineScope) {
+fun ReceiptStudio(printer: KmpPrinter, config: PrinterConfig, scope: kotlinx.coroutines.CoroutineScope) {
     var printStatus by remember { mutableStateOf<PrintStatus>(PrintStatus.Idle) }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -304,7 +304,7 @@ fun ReceiptStudio(printer: NggaPrinter, config: PrinterConfig, scope: kotlinx.co
                 shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
             ) {
                 Column(Modifier.padding(24.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("NGGAPRINTER PRO", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                    Text("KMPPRINTER PRO", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 18.sp)
                     Text("Multi-Platform Thermal Engine", color = Color.Gray, fontSize = 10.sp)
                     Spacer(Modifier.height(16.dp))
                     Text("-".repeat(config.characterPerLine), color = Color.LightGray, maxLines = 1)

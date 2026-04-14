@@ -1,6 +1,6 @@
 # 📥 Installation Guide & KMP Masterclass
 
-Welcome to the **NggaPrinter** deep-dive integration guide. This document is designed to help you integrate this library into your Kotlin Multiplatform (KMP) project with professional-grade standards.
+Welcome to the **KmpPrinter** deep-dive integration guide. This document is designed to help you integrate this library into your Kotlin Multiplatform (KMP) project with professional-grade standards.
 
 ---
 
@@ -17,7 +17,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        // 🚀 NggaPrinter Professional Distribution Path
+        // 🚀 KmpPrinter Professional Distribution Path
         maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }
     }
 }
@@ -31,15 +31,15 @@ Open the `build.gradle.kts` file of your target module (usually `:shared` or `:c
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            // Use stable version 1.0.0 (No 'v' prefix)
-            implementation("io.github.ringga-dev:nggaprinter:1.0.0")
+            // Use stable version 1.0.1 (No 'v' prefix)
+            implementation("io.github.ringga-dev:kmp_printer:1.0.1")
         }
     }
 }
 ```
 
 > [!TIP]
-> **Important**: Always use version `1.0.0` in your Gradle code. The `v` character is only used for Git Tag labels on GitHub, not for Maven artifact IDs.
+> **Important**: Always use version `1.0.1` in your Gradle code. The `v` character is only used for Git Tag labels on GitHub, not for Maven artifact IDs.
 
 ---
 
@@ -67,12 +67,12 @@ Add a Bluetooth usage description to avoid Apple store rejection:
 
 ## ⚡ Usage in KMP (Shared) Module
 
-If you wish to use NggaPrinter inside your `shared` (Business Logic) module, follow this pattern:
+If you wish to use KmpPrinter inside your `shared` (Business Logic) module, follow this pattern:
 
 ```kotlin
 // Inside CommonMain (Shared Kotlin Library)
 class ReceiptManager {
-    private val printer = NggaPrinter() // Unified platform initialization
+    private val printer = KmpPrinter() // Unified platform initialization
 
     suspend fun printReceipt(address: String) {
         val config = PrinterConfig(
@@ -92,13 +92,13 @@ Use this if you have a pure Native project (Swift-only or Kotlin Android-only).
 
 1.  Visit the [Releases Page](https://github.com/ringga-dev/Printer-ESC-POS/releases).
 2.  Download the `.aar` (Android) or `.xcframework.zip` (iOS) file.
-3.  **Android**: Place in `libs` folder -> `implementation(files("libs/nggaprinter.aar"))`.
+3.  **Android**: Place in `libs` folder -> `implementation(files("libs/kmp_printer.aar"))`.
 4.  **iOS**: Drag the Framework into Xcode -> **Frameworks, Libraries, and Embedded Content**.
 
 ---
 
 ## ⚪ Option 3: Local Module (Source Code)
-Use this if you need to modify the internal logic of NggaPrinter.
+Use this if you need to modify the internal logic of KmpPrinter.
 
 1.  Copy the `/printer` folder into your project.
 2.  Register in `settings.gradle.kts`: `include(":printer")`.

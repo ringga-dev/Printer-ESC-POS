@@ -1,6 +1,6 @@
 # 📥 Panduan Instalasi & KMP Masterclass
 
-Selamat datang di panduan integrasi mendalam **NggaPrinter**. Dokumentasi ini dirancang agar Anda bisa mengintegrasikan library ini ke proyek Kotlin Multiplatform (KMP) Anda dengan standar profesional.
+Selamat datang di panduan integrasi mendalam **KmpPrinter**. Dokumentasi ini dirancang agar Anda bisa mengintegrasikan library ini ke proyek Kotlin Multiplatform (KMP) Anda dengan standar profesional.
 
 ---
 
@@ -17,7 +17,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        // 🚀 Jalur Distribusi Profesional NggaPrinter
+        // 🚀 Jalur Distribusi Profesional KmpPrinter
         maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }
     }
 }
@@ -31,21 +31,21 @@ Buka file `build.gradle.kts` di modul target Anda (biasanya `:composeApp` atau `
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            // Gunakan versi stabil 1.0.0 (Tanpa awalan 'v')
-            implementation("io.github.ringga-dev:nggaprinter:1.0.0")
+            // Gunakan versi stabil 1.0.1 (Tanpa awalan 'v')
+            implementation("io.github.ringga-dev:kmp_printer:1.0.1")
         }
     }
 }
 ```
 
 > [!TIP]
-> **Penting**: Selalu gunakan versi `1.0.0` di kode Gradle Anda. Huruf `v` hanya digunakan untuk label Tag di GitHub, bukan untuk ID artifact Maven.
+> **Penting**: Selalu gunakan versi `1.0.1` di kode Gradle Anda. Huruf `v` hanya digunakan untuk label Tag di GitHub, bukan untuk ID artifact Maven.
 
 ---
 
 ## 🛠️ Konfigurasi Platform (Wajib)
 
-Agar fitur pencarian printer (Discovery) berjalan lancar, Anda harus menambahkan izin berikut pada aplikasi utama Anda:
+Agar fitur pencarian printer (Discovery) berjalan lancar, Anda harus menambahkan izin berikut pada aplikasi utama Anda.
 
 ### 🤖 Android (AndroidManifest.xml)
 Pastikan Anda menangani izin runtime jika Anda mentargetkan Android 12+.
@@ -67,12 +67,12 @@ Tambahkan deskripsi penggunaan Bluetooth agar Apple tidak menolak aplikasi Anda:
 
 ## ⚡ Cara Panggil di Modul KMP (Shared)
 
-Jika Anda ingin menggunakan NggaPrinter di dalam modul `shared` (Business Logic), ikuti pola ini:
+Jika Anda ingin menggunakan KmpPrinter di dalam modul `shared` (Business Logic), ikuti pola ini:
 
 ```kotlin
 // Di dalam CommonMain (Kotlin Library)
 class ReceiptManager {
-    private val printer = NggaPrinter() // Inisialisasi otomatis lintas platform
+    private val printer = KmpPrinter() // Inisialisasi otomatis lintas platform
 
     suspend fun printReceipt(address: String) {
         val config = PrinterConfig(
@@ -92,13 +92,13 @@ Gunakan jika Anda memiliki project Native murni (Swift Only atau Kotlin Android 
 
 1.  Buka [Halaman Releases](https://github.com/ringga-dev/Printer-ESC-POS/releases).
 2.  Ambil file `.aar` (Android) atau `.xcframework.zip` (iOS).
-3.  **Android**: Taruh di folder `libs` -> `implementation(files("libs/nggaprinter.aar"))`.
+3.  **Android**: Taruh di folder `libs` -> `implementation(files("libs/kmp_printer.aar"))`.
 4.  **iOS**: Masukkan Framework ke dalam Xcode -> **Frameworks, Libraries, and Embedded Content**.
 
 ---
 
 ## ⚪ Opsi 3: Local Module (Source Code)
-Gunakan jika Anda ingin memodifikasi logika internal NggaPrinter.
+Gunakan jika Anda ingin memodifikasi logika internal KmpPrinter.
 
 1.  Salin folder `/printer` ke project Anda.
 2.  Daftarkan di `settings.gradle.kts`: `include(":printer")`.

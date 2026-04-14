@@ -1,6 +1,6 @@
-# Contributing to NggaPrinter
+# Contributing to KmpPrinter
 
-Terima kasih telah tertarik untuk berkontribusi pada **NggaPrinter**! Kami sangat menghargai bantuan Anda untuk menjadikan library ini lebih baik.
+Terima kasih telah tertarik untuk berkontribusi pada **KmpPrinter**! Kami sangat menghargai bantuan Anda untuk menjadikan library ini lebih baik.
 
 ## 🛠️ Cara Berkontribusi
 

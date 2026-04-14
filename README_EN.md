@@ -1,4 +1,4 @@
-# 🖨️ NggaPrinter
+# 🖨️ KmpPrinter
 **The Ultimate Kotlin Multiplatform Thermal Printing Suite for Professionals.**
 
 **Languages:** [Bahasa Indonesia](./README.md) | **English** | [简体中文](./README_ZH.md)
@@ -10,14 +10,14 @@
 
 ---
 
-NggaPrinter is a high-performance ESC/POS thermal printing library designed for seamless integration across **Android, iOS, and JVM (Desktop)**. Powered by a unified **Connector Pattern** architecture, you can command various thermal printer brands (Bluetooth, USB, Network) using a single, standardized codebase.
+KmpPrinter is a high-performance ESC/POS thermal printing library designed for seamless integration across **Android, iOS, and JVM (Desktop)**. Powered by a unified **Connector Pattern** architecture, you can command various thermal printer brands (Bluetooth, USB, Network) using a single, standardized codebase.
 
 > [!IMPORTANT]
 > **Production Ready**: This library is fortified with an **Auto-Release CI/CD** pipeline. Every version update is guaranteed stable, with binaries (`.aar`, `.jar`, `.xcframework`) always available on the releases page.
 
 ---
 
-## 🚀 Premium Features (Why NggaPrinter?)
+## 🚀 Premium Features (Why KmpPrinter?)
 
 | Feature | Description | Status |
 | :--- | :--- | :---: |
@@ -29,7 +29,7 @@ NggaPrinter is a high-performance ESC/POS thermal printing library designed for 
 
 ---
 
-## 📦 Rapid Installation (v1.0.0)
+## 📦 Rapid Installation (v1.0.1)
 
 For a highly detailed and professional integration guide, please visit our masterclass:
 
@@ -50,7 +50,7 @@ dependencyResolutionManagement {
 2. **Dependency**:
 ```kotlin
 // commonMain
-implementation("io.github.ringga-dev:nggaprinter:1.0.0")
+implementation("io.github.ringga-dev:kmp_printer:1.0.1")
 ```
 
 ---
@@ -58,14 +58,14 @@ implementation("io.github.ringga-dev:nggaprinter:1.0.0")
 ## 🛠️ Quick Usage Snippet
 
 ```kotlin
-val printer = NggaPrinter()
+val printer = KmpPrinter()
 val config = PrinterConfig(name = "MTP-II", connectionType = "BLUETOOTH", address = "00:11...")
 
 val commands = printer.newCommandBuilder(config)
     .initialize()
     .alignCenter()
     .setBold(true)
-    .line("NGGA PRINTER STORE")
+    .line("KMP PRINTER STORE")
     .setBold(false)
     .divider()
     .tableRow(listOf("Iced Coffee", "2x", "$ 4.00"), listOf(2, 1, 1))

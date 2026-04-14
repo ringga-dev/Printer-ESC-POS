@@ -20,15 +20,15 @@ kotlin {
         }
     }
 
-    val xcf = XCFramework("NggaPrinter")
+    val xcf = XCFramework("KmpPrinter")
     listOf(
         iosArm64(),
         iosSimulatorArm64()
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
-            baseName = "NggaPrinter"
+            baseName = "KmpPrinter"
             isStatic = true
-            freeCompilerArgs += listOf("-Xbinary=bundleId=io.github.ringga_dev.nggaprinter")
+            freeCompilerArgs += listOf("-Xbinary=bundleId=io.github.ringga_dev.kmp_printer")
             xcf.add(this)
         }
     }
@@ -106,14 +106,14 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             groupId = project.property("LIB_GROUP").toString()
-            artifactId = "nggaprinter"
+            artifactId = "kmp_printer"
             version = project.property("LIB_VERSION").toString()
 
             artifact(kmpSourcesJar)
             artifact(kmpJavadocJar)
 
             pom {
-                name.set("NggaPrinter")
+                name.set("KmpPrinter")
                 description.set("Professional Kotlin Multiplatform Thermal Printing Library for ESC/POS.")
                 url.set("https://github.com/ringga-dev/Printer-ESC-POS")
                 licenses {
@@ -140,8 +140,8 @@ publishing {
 
     repositories {
         maven {
-            name = "LocalRepo"
-            url = uri("${rootProject.projectDir}/build/repo")
+            name = "GithubRepo"
+            url = uri("${rootProject.projectDir.path}/maven-repo")
         }
     }
 }

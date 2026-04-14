@@ -1,6 +1,6 @@
 # 📥 安装指南与 KMP 专家课程
 
-欢迎查看 **NggaPrinter** 的深度集成指南。 本文档旨在帮助您以专业级标准将此库集成到您的 Kotlin 多平台 (KMP) 项目中。
+欢迎查看 **KmpPrinter** 的深度集成指南。 本文档旨在帮助您以专业级标准将此库集成到您的 Kotlin 多平台 (KMP) 项目中。
 
 ---
 
@@ -17,7 +17,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        // 🚀 NggaPrinter 专业分发路径
+        // 🚀 KmpPrinter 专业分发路径
         maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }
     }
 }
@@ -31,15 +31,15 @@ dependencyResolutionManagement {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            // 使用稳定版本 1.0.0 (不带 'v' 前缀)
-            implementation("io.github.ringga-dev:nggaprinter:1.0.0")
+            // 使用稳定版本 1.0.1 (不带 'v' 前缀)
+            implementation("io.github.ringga-dev:kmp_printer:1.0.1")
         }
     }
 }
 ```
 
 > [!TIP]
-> **重要**: 在 Gradle 代码中请务必使用版本号 `1.0.0`。 字符 `v` 仅用于 GitHub 上的 Git Tag 标签，不用于 Maven 制品 ID。
+> **重要**: 在 Gradle 代码中请务必使用版本号 `1.0.1`。 字符 `v` 仅用于 GitHub 上的 Git Tag 标签，不用于 Maven 制品 ID。
 
 ---
 
@@ -67,12 +67,12 @@ kotlin {
 
 ## ⚡ 在 KMP (Shared) 模块中使用
 
-如果您希望在 `shared`（业务逻辑）模块中使用 NggaPrinter，请参考以下模式：
+如果您希望在 `shared`（业务逻辑）模块中使用 KmpPrinter，请参考以下模式：
 
 ```kotlin
 // 在 CommonMain (共享 Kotlin 库) 中
 class ReceiptManager {
-    private val printer = NggaPrinter() // 统一的多平台初始化
+    private val printer = KmpPrinter() // 统一的多平台初始化
 
     suspend fun printReceipt(address: String) {
         val config = PrinterConfig(
@@ -92,13 +92,13 @@ class ReceiptManager {
 
 1.  访问 [发布页面](https://github.com/ringga-dev/Printer-ESC-POS/releases)。
 2.  下载 `.aar` (Android) 或 `.xcframework.zip` (iOS) 文件。
-3.  **Android**: 存放在 `libs` 文件夹中 -> `implementation(files("libs/nggaprinter.aar"))`。
+3.  **Android**: 存放在 `libs` 文件夹中 -> `implementation(files("libs/kmp_printer.aar"))`。
 4.  **iOS**: 将 Framework 拖入 Xcode -> **Frameworks, Libraries, and Embedded Content**。
 
 ---
 
 ## ⚪ 选项 3: 本地模块 (源代码)
-如果您需要修改 NggaPrinter 的内部逻辑，请使用此选项。
+如果您需要修改 KmpPrinter 的内部逻辑，请使用此选项。
 
 1.  将 `/printer` 文件夹复制到您的项目中。
 2.  在 `settings.gradle.kts` 中注册: `include(":printer")`。

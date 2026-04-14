@@ -44,7 +44,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: nggaprinter-aar
+          name: kmp_printer-aar
           path: printer/build/outputs/aar/printer-release.aar
 
   # 3. Build iOS XCFramework
@@ -62,16 +62,16 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Build XCFramework
-        run: ./gradlew :printer:assembleNggaPrinterXCFramework --no-daemon
+        run: ./gradlew :printer:assembleKmpPrinterXCFramework --no-daemon
       - name: Zip XCFramework
         run: |
           cd printer/build/XCFrameworks/release/
-          zip -r ../../../NggaPrinter.xcframework.zip NggaPrinter.xcframework
+          zip -r ../../../KmpPrinter.xcframework.zip KmpPrinter.xcframework
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: nggaprinter-xcframework
-          path: NggaPrinter.xcframework.zip
+          name: kmp_printer-xcframework
+          path: KmpPrinter.xcframework.zip
 
   # 4. Build JVM JAR (Desktop)
   build-jvm:
@@ -92,7 +92,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: nggaprinter-jvm
+          name: kmp_printer-jvm
           path: printer/build/libs/printer-jvm-*.jar
 
   # 5. GitHub Channel: Maven Repo Branch
@@ -173,19 +173,19 @@ jobs:
           tag_name: v${{ needs.setup.outputs.lib_version }}
           name: "v${{ needs.setup.outputs.lib_version }}"
           files: |
-            release_artifacts/nggaprinter-aar/*
-            release_artifacts/nggaprinter-xcframework/*
-            release_artifacts/nggaprinter-jvm/*
+            release_artifacts/kmp_printer-aar/*
+            release_artifacts/kmp_printer-xcframework/*
+            release_artifacts/kmp_printer-jvm/*
             release_artifacts/sonatype-central-bundle/*
           body: |
-            ## 🚀 NggaPrinter v${{ needs.setup.outputs.lib_version }}
+            ## 🚀 KmpPrinter v${{ needs.setup.outputs.lib_version }}
             
             Professional Kotlin Multiplatform Thermal Printing Library. 
             Generated automatically from `master`.
 
             ### 📦 Compiled Assets
             - **Android**: `printer-release.aar`
-            - **iOS**: `NggaPrinter.xcframework.zip`
+            - **iOS**: `KmpPrinter.xcframework.zip`
             - **JVM**: Desktop JAR file
             - **Bundle**: Sonatype Central (Manual Upload)
 
@@ -195,7 +195,7 @@ jobs:
             ```
             
             ```kotlin
-            implementation("io.github.ringga-dev:nggaprinter:v${{ needs.setup.outputs.lib_version }}")
+            implementation("io.github.ringga-dev:kmp_printer:v${{ needs.setup.outputs.lib_version }}")
             ```
           draft: false
           prerelease: false

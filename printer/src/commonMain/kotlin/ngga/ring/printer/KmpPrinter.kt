@@ -15,7 +15,7 @@ import ngga.ring.printer.util.escpos.ESCPosCommandBuilder
  * The "Satu Pintu" (Single Entry Point) for the printer library.
  * This class handles all printer operations using a unified Connector architecture.
  */
-class NggaPrinter {
+class KmpPrinter {
 
     /**
      * Platform-aware factory for creating printer connectors.

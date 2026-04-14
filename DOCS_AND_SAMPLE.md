@@ -1,4 +1,4 @@
-# 🖨️ NggaPrinter: Developer Reference Guide
+# 🖨️ KmpPrinter: Developer Reference Guide
 
 A professional guide to integrating and mastering thermal printing in KMP.
 
@@ -8,10 +8,10 @@ A professional guide to integrating and mastering thermal printing in KMP.
 
 ## 🛠️ 1. Architecture: The Connector Pattern
 
-NggaPrinter uses a factory-based **Connector Pattern**. This decouples the discovery and transmission logic from the main application facade.
+KmpPrinter uses a factory-based **Connector Pattern**. This decouples the discovery and transmission logic from the main application facade.
 
 ### Key Components
-- **`NggaPrinter`**: The high-level facade for printing receipts and raw bytes.
+- **`KmpPrinter`**: The high-level facade for printing receipts and raw bytes.
 - **`PrinterConnectorFactory`**: The platform-native engine for finding and creating connectors.
 - **`PrinterConnector`**: The interface representing a single active session.
 
@@ -42,7 +42,7 @@ builder.initialize()
 
 ## 🖼️ 3. Advanced Image Dithering
 
-Printing photos on thermal paper often looks "blochy". NggaPrinter now defaults to **Floyd-Steinberg Dithering** in `BitmapToEscPos` (Android), ensuring smooth gradients for logos and profile pictures.
+Printing photos on thermal paper often looks "blochy". KmpPrinter now defaults to **Floyd-Steinberg Dithering** in `BitmapToEscPos` (Android), ensuring smooth gradients for logos and profile pictures.
 
 ---
 

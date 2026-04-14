@@ -140,8 +140,8 @@ publishing {
 
     repositories {
         maven {
-            name = "GithubRepo"
-            url = uri("${rootProject.projectDir.path}/maven-repo")
+            name = "LocalRepo"
+            url = uri(layout.buildDirectory.dir("repo"))
         }
     }
 }

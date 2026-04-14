@@ -3,11 +3,11 @@
   <groupId>io.github.ringga-dev</groupId>
   <artifactId>printer-android</artifactId>
   <versioning>
-    <latest>1.0.1</latest>
-    <release>1.0.1</release>
+    <latest>1.0.2</latest>
+    <release>1.0.2</release>
     <versions>
-      <version>1.0.1</version>
+      <version>1.0.2</version>
     </versions>
-    <lastUpdated>20260414141425</lastUpdated>
+    <lastUpdated>20260414162123</lastUpdated>
   </versioning>
 </metadata>

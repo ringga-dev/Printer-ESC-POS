@@ -180,7 +180,7 @@ jobs:
           body: |
             ## 🚀 KmpPrinter v${{ needs.setup.outputs.lib_version }}
             
-            Professional Kotlin Multiplatform Thermal Printing Library. 
+            KmpPrinter: Professional Kotlin Multiplatform Thermal Printing Library for ESC/POS. 
             Generated automatically from `master`.
 
             ### 📦 Compiled Assets
@@ -195,7 +195,7 @@ jobs:
             ```
             
             ```kotlin
-            implementation("io.github.ringga-dev:kmp_printer:v${{ needs.setup.outputs.lib_version }}")
+            implementation("io.github.ringga-dev:kmp_printer:${{ needs.setup.outputs.lib_version }}")
             ```
           draft: false
           prerelease: false

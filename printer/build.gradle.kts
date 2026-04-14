@@ -68,6 +68,7 @@ android {
     compileSdk = 37
     defaultConfig {
         minSdk = 24
+        consumerProguardFiles("consumer-rules.pro")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -104,13 +105,14 @@ val kmpJavadocJar by tasks.registering(Jar::class) {
 
 publishing {
     publications {
-        create<MavenPublication>("maven") {
-            groupId = project.property("LIB_GROUP").toString()
-            artifactId = "kmp_printer"
-            version = project.property("LIB_VERSION").toString()
-
-            artifact(kmpSourcesJar)
-            artifact(kmpJavadocJar)
+        // The Multiplatform plugin automatically creates publications for each target.
+        // We just need to configure them to include standard pom metadata.
+        withType<MavenPublication> {
+            // artifactId is handled by KMP automatically.
+            // groupId and version are already set at the top level
+            
+            // Note: KMP automatically handles sources JAR for most targets.
+            // If you need Javadoc, it should be configured specifically.
 
             pom {
                 name.set("KmpPrinter")

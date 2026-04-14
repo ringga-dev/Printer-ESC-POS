@@ -17,6 +17,24 @@ KmpPrinter adalah library thermal printing ESC/POS yang dirancang untuk performa
 
 ---
 
+## 📋 Spesifikasi & Batasan (Requirement & Limitations)
+
+### Spesifikasi Minimal
+Agar library dapat berjalan dengan optimal, pastikan proyek Anda memenuhi syarat berikut:
+- **Kotlin**: v2.3.20 atau lebih tinggi.
+- **Android**: API Level 24+ (Android 7.0 Nougat).
+- **iOS**: iOS 13.0+ (Architecture arm64).
+- **JVM/Desktop**: Java 11 atau lebih tinggi.
+- **Gradle**: v8.0 atau lebih tinggi.
+
+### Batasan Library (Known Limitations)
+- **Protokol**: Hanya mendukung perintah standar **ESC/POS**.
+- **Konektivitas iOS**: Hanya mendukung Bluetooth (BLE/Classic tergantung hardware). Koneksi USB pada iOS tidak didukung karena batasan sistem operasi.
+- **Pencetakan Gambar**: Menggunakan mode **Raster Bit Image** (Mode paling kompatibel, namun ukuran data bisa besar untuk gambar resolusi tinggi).
+- **Encoding**: Default menggunakan UTF-8. Karakter khusus di luar standar ASCII bergantung pada dukungan Code Page di firmware printer Anda.
+
+---
+
 ## 🚀 Fitur Unggulan (Why KmpPrinter?)
 
 | Fitur | Penjelasan | Status |
@@ -29,7 +47,7 @@ KmpPrinter adalah library thermal printing ESC/POS yang dirancang untuk performa
 
 ---
 
-## 📦 Pemasangan Cepat (v1.0.1)
+## 📦 Pemasangan Cepat (v1.0.2)
 
 Untuk integrasi yang paling detail dan profesional, silakan lihat panduan lengkap kami:
 
@@ -50,7 +68,7 @@ dependencyResolutionManagement {
 2. **Dependency**:
 ```kotlin
 // commonMain
-implementation("io.github.ringga-dev:kmp_printer:1.0.1")
+implementation("io.github.ringga-dev:kmp_printer:1.0.2")
 ```
 
 ---
@@ -95,6 +113,22 @@ printer.printRaw(config, commands).collect { status ->
 
 ### iOS
 Tambahkan `NSBluetoothAlwaysUsageDescription` ke `Info.plist` Anda.
+
+---
+
+## 🔍 Troubleshooting & FAQ
+
+### 1. Unresolved Reference: `KmpPrinter`
+Pastikan Anda sudah menambahkan `mavenCentral()` dan URL GitHub Maven di `settings.gradle.kts`. Jika menggunakan Gradle versi lama, tambahkan di `build.gradle` root.
+```kotlin
+maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }
+```
+
+### 2. Error Saat Build Release (Android)
+Library ini sudah menyertakan **Consumer ProGuard Rules**. Anda tidak perlu menambahkan konfigurasi `-keep` manual untuk class internal library. Pastikan `minifyEnabled true` tetap aktif jika Anda ingin optimasi.
+
+### 3. Masalah Izin Bluetooth di Android 12+
+Pastikan Anda meminta izin `BLUETOOTH_SCAN` dan `BLUETOOTH_CONNECT` secara runtime. Gunakan `PrinterPermissionManager` (tersedia di library) untuk mempermudah pengecekan.
 
 ---
 

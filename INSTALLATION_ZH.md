@@ -4,6 +4,25 @@
 
 ---
 
+## 📋 规格与限制 (Requirements & Limitations)
+
+在开始集成之前，请确保您的开发环境满足以下标准：
+
+| 平台 | 最低版本 | 说明 |
+| :--- | :--- | :--- |
+| **Kotlin** | 2.3.20+ | 支持最新的 Compose Multiplatform。 |
+| **Android** | SDK 24 (7.0) | 支持蓝牙和网络 Socket 连接。 |
+| **iOS** | 13.0+ | arm64 架构 (实机与模拟器)。 |
+| **JVM/Desktop** | Java 11+ | 用于串口/蓝牙桌面连接。 |
+| **Gradle** | 8.0+ | 需要使用最新的 KMP 插件。 |
+
+### ⚠️ 重要限制:
+1.  **仅支持 ESC/POS**: 此库专为遵循 ESC/POS 指令标准的热敏打印机而设计。
+2.  **iOS 无 USB 支持**: 由于 Apple 的政策限制，无法在 iOS 上直接通过 USB 连接热敏打印机。 请改用蓝牙或网络。
+3.  **图像 DPI**: 图像打印是通过位图栅格进行的。 为了获得最佳效果，请使用高对比度的图像（该库会自动进行抖动处理）。
+
+---
+
 ## 🟢 选项 1: GitHub Maven 仓库 (推荐)
 这是 **Kotlin 多平台 (KMP)** 项目最现代、最“干净”的集成方式。
 
@@ -31,15 +50,15 @@ dependencyResolutionManagement {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            // 使用稳定版本 1.0.1 (不带 'v' 前缀)
-            implementation("io.github.ringga-dev:kmp_printer:1.0.1")
+            // 使用稳定版本 1.0.2 (不带 'v' 前缀)
+            implementation("io.github.ringga-dev:kmp_printer:1.0.2")
         }
     }
 }
 ```
 
 > [!TIP]
-> **重要**: 在 Gradle 代码中请务必使用版本号 `1.0.1`。 字符 `v` 仅用于 GitHub 上的 Git Tag 标签，不用于 Maven 制品 ID。
+> **重要**: 在 Gradle 代码中请务必使用版本号 `1.0.2`。 字符 `v` 仅用于 GitHub 上的 Git Tag 标签，不用于 Maven 制品 ID。
 
 ---
 

@@ -17,6 +17,24 @@ KmpPrinter is a high-performance ESC/POS thermal printing library designed for s
 
 ---
 
+## 📋 Requirements & Limitations
+
+### Minimum Specifications
+To ensure optimal performance, verify that your project meets the following requirements:
+- **Kotlin**: v2.3.20 or higher.
+- **Android**: API Level 24+ (Android 7.0 Nougat).
+- **iOS**: iOS 13.0+ (Architecture arm64).
+- **JVM/Desktop**: Java 11 or higher.
+- **Gradle**: v8.0 or higher.
+
+### Known Limitations
+- **Protocol**: Exclusively supports standard **ESC/POS** commands.
+- **iOS Connectivity**: Only Bluetooth (BLE/Classic depending on hardware) is supported. Direct USB connection on iOS is not supported due to operating system restrictions.
+- **Image Printing**: Uses **Raster Bit Image** mode (Most compatible mode, though data size can be large for high-resolution images).
+- **Encoding**: Defaults to UTF-8. Special characters outside standard ASCII depend on the Code Page supported by your printer's firmware.
+
+---
+
 ## 🚀 Premium Features (Why KmpPrinter?)
 
 | Feature | Description | Status |
@@ -29,7 +47,7 @@ KmpPrinter is a high-performance ESC/POS thermal printing library designed for s
 
 ---
 
-## 📦 Rapid Installation (v1.0.1)
+## 📦 Rapid Installation (v1.0.2)
 
 For a highly detailed and professional integration guide, please visit our masterclass:
 
@@ -50,7 +68,7 @@ dependencyResolutionManagement {
 2. **Dependency**:
 ```kotlin
 // commonMain
-implementation("io.github.ringga-dev:kmp_printer:1.0.1")
+implementation("io.github.ringga-dev:kmp_printer:1.0.2")
 ```
 
 ---

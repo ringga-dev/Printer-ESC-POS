@@ -17,6 +17,24 @@ KmpPrinter 是一款高性能的 ESC/POS 热敏打印库，旨在轻松集成到
 
 ---
 
+## 📋 规格与限制 (Requirements & Limitations)
+
+### 最低规格
+为了确保最佳性能，请确认您的项目满足以下要求：
+- **Kotlin**: v2.3.20 或更高版本。
+- **Android**: API Level 24+ (Android 7.0 Nougat)。
+- **iOS**: iOS 13.0+ (arm64 架构)。
+- **JVM/Desktop**: Java 11 或更高版本。
+- **Gradle**: v8.0 或更高版本。
+
+### 已知限制
+- **协议**: 仅支持标准 **ESC/POS** 指令。
+- **iOS 连接性**: 仅支持蓝牙连接（取决于硬件的 BLE/Classic）。由于操作系统限制，iOS 上不支持直接 USB 连接。
+- **图像打印**: 使用 **位图栅格 (Raster Bit Image)** 模式（兼容性最佳，但高分辨率图像的数据量可能较大）。
+- **编码**: 默认为 UTF-8。标准 ASCII 以外的特殊字符取决于打印机固件支持的字库 (Code Page)。
+
+---
+
 ## 🚀 核心特性 (为什么选择 KmpPrinter?)
 
 | 特性 | 说明 | 状态 |
@@ -29,7 +47,7 @@ KmpPrinter 是一款高性能的 ESC/POS 热敏打印库，旨在轻松集成到
 
 ---
 
-## 📦 快速安装 (v1.0.1)
+## 📦 快速安装 (v1.0.2)
 
 如需查看最详尽、最专业的集成指南，请访问：
 
@@ -50,7 +68,7 @@ dependencyResolutionManagement {
 2. **依赖配置**:
 ```kotlin
 // commonMain
-implementation("io.github.ringga-dev:kmp_printer:1.0.1")
+implementation("io.github.ringga-dev:kmp_printer:1.0.2")
 ```
 
 ---

@@ -11,9 +11,26 @@ permissions:
   contents: write
 
 jobs:
+  # 0. Check & Lint (Quality Gate)
+  check:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      - name: Run Lint & Tests
+        run: ./gradlew :printer:lintRelease :printer:allTests --no-daemon
+
   # 1. Setup & Version Extraction
   setup:
     name: Setup & Versioning
+    needs: check
     runs-on: ubuntu-latest
     outputs:
       lib_version: ${{ steps.get_version.outputs.LIB_VERSION }}

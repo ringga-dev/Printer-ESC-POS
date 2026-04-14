@@ -4,6 +4,25 @@ Welcome to the **KmpPrinter** deep-dive integration guide. This document is desi
 
 ---
 
+## 📋 Requirements & Limitations
+
+Before beginning the integration, ensure your development environment meets the following criteria:
+
+| Platform | Minimum Version | Description |
+| :--- | :--- | :--- |
+| **Kotlin** | 2.3.20+ | Supports the latest Compose Multiplatform. |
+| **Android** | SDK 24 (7.0) | Supports Bluetooth & Network Socket. |
+| **iOS** | 13.0+ | Architecture arm64 (Real devices & Simulators). |
+| **JVM/Desktop** | Java 11+ | Used for Serial/Bluetooth Desktop connections. |
+| **Gradle** | 8.0+ | Required for the latest KMP plugins. |
+
+### ⚠️ Important Limitations:
+1.  **ESC/POS Only**: This library is specifically designed for thermal printers that follow the ESC/POS command standard.
+2.  **No USB on iOS**: Due to Apple's policies, direct USB connection to thermal printers is not available. Please use Bluetooth or Network instead.
+3.  **Image DPI**: Image printing is performed via bit-image raster. For best results, use high-contrast images (Dithering is handled automatically by the library).
+
+---
+
 ## 🟢 Option 1: GitHub Maven Repo (Recommended)
 This is the most modern and "cleanest" way to integrate for **Kotlin Multiplatform (KMP)** projects.
 
@@ -31,15 +50,15 @@ Open the `build.gradle.kts` file of your target module (usually `:shared` or `:c
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            // Use stable version 1.0.1 (No 'v' prefix)
-            implementation("io.github.ringga-dev:kmp_printer:1.0.1")
+            // Use stable version 1.0.2 (No 'v' prefix)
+            implementation("io.github.ringga-dev:kmp_printer:1.0.2")
         }
     }
 }
 ```
 
 > [!TIP]
-> **Important**: Always use version `1.0.1` in your Gradle code. The `v` character is only used for Git Tag labels on GitHub, not for Maven artifact IDs.
+> **Important**: Always use version `1.0.2` in your Gradle code. The `v` character is only used for Git Tag labels on GitHub, not for Maven artifact IDs.
 
 ---
 

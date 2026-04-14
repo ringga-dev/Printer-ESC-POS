@@ -133,10 +133,10 @@
           "name": "printer-iossimulatorarm64-1.0.1-metadata.jar",
           "url": "printer-iossimulatorarm64-1.0.1-metadata.jar",
           "size": 3925,
-          "sha512": "6bf478f600a42eb934bde20f8f1d410bcaa454a1dbcc7b49081a58432a01a40f88f5a624f337e5fb6ae7054d82f3213e81952430323db5af87859323012e9f2f",
-          "sha256": "e7b3e9965e2b1684befb37f7d4fce454584261e27029bf741796194a54ef67b3",
-          "sha1": "60c1334445df62aff575502df924602a657c1698",
-          "md5": "abd4ef84f28e0f8cedd9f50eb7dfa887"
+          "sha512": "f42256a0e41944ace4c6e66aeef18cfb6eddc92bfe7d779866a7d3b0ea86113275fa905d50328ac0934ba954e3f7bcd65df952c0d7ed0d8c7a1f3b1ce5fc852d",
+          "sha256": "a50688047b665cec91f5f92f7d6f3f5a767c9bfd4a1b89066dcf7a9fdfeb05cd",
+          "sha1": "477e6df8f8419a7567982f607c8af03a3fecfdd7",
+          "md5": "e46cffd4c62faf1d750e2d23f66c5c25"
         }
       ]
     }

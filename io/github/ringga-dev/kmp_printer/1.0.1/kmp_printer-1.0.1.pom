@@ -7,7 +7,7 @@
   <version>1.0.1</version>
   <packaging>pom</packaging>
   <name>KmpPrinter</name>
-  <description>Professional Kotlin Multiplatform Thermal Printing Library for ESC/POS.</description>
+  <description>KmpPrinter: Professional Kotlin Multiplatform Thermal Printing Library for ESC/POS.</description>
   <url>https://github.com/ringga-dev/Printer-ESC-POS</url>
   <licenses>
     <license>

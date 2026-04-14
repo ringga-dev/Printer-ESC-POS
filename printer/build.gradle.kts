@@ -153,6 +153,6 @@ signing {
     val signingPassword = System.getenv("ORG_GRADLE_PROJECT_signingPassword")
     if (signingKey != null && signingPassword != null) {
         useInMemoryPgpKeys(signingKey, signingPassword)
-        sign(publishing.publications["maven"])
+        sign(publishing.publications)
     }
 }

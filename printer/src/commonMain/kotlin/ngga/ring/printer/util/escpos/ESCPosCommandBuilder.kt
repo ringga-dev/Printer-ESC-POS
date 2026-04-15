@@ -22,28 +22,49 @@ class ESCPosCommandBuilder(
                 // Heuristic: (PaperWidth - 10mm margin) * 8 dots/mm
                 ((config.paperWidth - 10) * 8).coerceAtLeast(384)
             }
+            val dotsPerChar = dots.toDouble() / config.characterPerLine
             val printWidth = if (config.autoCenter) {
                 (dots - (2 * config.leftMargin)).coerceAtLeast(1)
             } else {
                 dots
             }
 
+            // Adjust characters per line if area is narrowed by auto-center
+            val effectiveChars = if (config.autoCenter) {
+                (printWidth / dotsPerChar).toInt().coerceAtLeast(1)
+            } else {
+                config.characterPerLine
+            }
+
+            // SMART CALIBRATION: Calculate the gap between printable dots and actual text dots
+            // This ensures characters are centered even if charsPerLine < max possible
+            val actualTextWidth = effectiveChars * dotsPerChar
+            val centeringPadding = if (config.autoCenter) {
+                ((printWidth - actualTextWidth) / 2).toInt().coerceAtLeast(0)
+            } else {
+                0
+            }
+
             return ESCPosCommandBuilder(
                 ESCPosConfig(
-                    charsPerLine = config.characterPerLine,
-                    paperWidthDots = printWidth,
-                    leftMargin = config.leftMargin
+                    charsPerLine = effectiveChars,
+                    paperWidthDots = (actualTextWidth.toInt()), 
+                    leftMargin = config.leftMargin + centeringPadding
                 )
-            )
+            ).apply {
+                this.hardwareTotalDots = dots
+            }
         }
     }
 
     private val buffer = mutableListOf<Byte>()
     private val previewBlocks = mutableListOf<PreviewBlock>()
+    private var hardwareTotalDots = 0
     private var currentWidthMultiplier = 1
     private var currentHeightMultiplier = 1
     private var isBold = false
     private var isUnderline = false
+    private var isInverted = false
     private var currentAlignment = TextAlignment.LEFT
 
     /**
@@ -70,8 +91,10 @@ class ESCPosCommandBuilder(
                 text = text,
                 alignment = currentAlignment,
                 isBold = isBold,
-                isBig = currentWidthMultiplier > 1,
-                isUnderline = isUnderline
+                isUnderline = isUnderline,
+                isInverted = isInverted,
+                widthMultiplier = currentWidthMultiplier,
+                heightMultiplier = currentHeightMultiplier
             ))
         }
         val safeMax = (config.charsPerLine / currentWidthMultiplier - 1).coerceAtLeast(1)
@@ -108,7 +131,7 @@ class ESCPosCommandBuilder(
         right: String,
         maxCharsPerLine: Int = config.charsPerLine / currentWidthMultiplier
     ): ESCPosCommandBuilder {
-        previewBlocks.add(PreviewBlock.KeyValue(left, right, isBold))
+        previewBlocks.add(PreviewBlock.KeyValue(left, right, isBold, isInverted))
         writeText(ESCPosTextLayout.segmentedText(left, right, maxCharsPerLine))
         writeLF()
         return this
@@ -227,6 +250,7 @@ class ESCPosCommandBuilder(
         center: Boolean = false
     ): ESCPosCommandBuilder {
         if (center) alignCenter()
+        previewBlocks.add(PreviewBlock.Image(width, height, currentAlignment))
         
         val widthBytes = (width + 7) / 8
         val xL = widthBytes % 256
@@ -348,6 +372,7 @@ class ESCPosCommandBuilder(
     }
 
     fun invert(enabled: Boolean): ESCPosCommandBuilder {
+        this.isInverted = enabled
         if (enabled) invertOn() else invertOff()
         return this
     }
@@ -370,7 +395,7 @@ class ESCPosCommandBuilder(
      *                |....|....|....|....
      */
     fun printRuler(): ESCPosCommandBuilder {
-        val totalDots = config.paperWidthDots
+        val totalDots = if (hardwareTotalDots > 0) hardwareTotalDots else config.paperWidthDots
         line("HARDWARE CALIBRATION RULER")
         line("-".repeat(config.charsPerLine))
         
@@ -524,6 +549,7 @@ class ESCPosCommandBuilder(
         val w = width.coerceIn(1, 8) - 1
         val h = height.coerceIn(1, 8) - 1
         currentWidthMultiplier = width.coerceIn(1, 8)
+        currentHeightMultiplier = height.coerceIn(1, 8)
         val size = (w shl 4) or h
         writeRaw(0x1D, 0x21, size)
         

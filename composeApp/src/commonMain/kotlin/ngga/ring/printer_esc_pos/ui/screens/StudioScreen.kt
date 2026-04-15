@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -19,6 +20,10 @@ import ngga.ring.printer.model.PrintStatus
 import ngga.ring.printer_esc_pos.viewmodel.PrinterViewModel
 import ngga.ring.printer.util.preview.PreviewBlock
 import ngga.ring.printer.util.escpos.TextAlignment
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.TransformOrigin
 
 @Composable
 fun StudioScreen(viewModel: PrinterViewModel) {
@@ -27,6 +32,8 @@ fun StudioScreen(viewModel: PrinterViewModel) {
     val connectionState by viewModel.connectionState.collectAsState()
     val previewBlocks by viewModel.previewBlocks.collectAsState()
     val receiptScrollState = rememberScrollState()
+
+    val baseFontSize = 10.sp
 
     Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
         Text(
@@ -59,17 +66,58 @@ fun StudioScreen(viewModel: PrinterViewModel) {
                 colors = CardDefaults.elevatedCardColors(containerColor = Color.White),
                 shape = MaterialTheme.shapes.large
             ) {
-                Column(
+                // Calculate effective padding based on left margin
+                // paperWidth (mm) to dots (approx 8 dots/mm)
+                val totalDots = (config.paperWidth - 10) * 8 
+                val dotsPerChar = totalDots.toDouble() / config.characterPerLine.toDouble()
+                
+                val effectiveWidth = if (config.autoCenter) {
+                    (totalDots - (2 * config.leftMargin)).coerceAtLeast(1).toDouble()
+                } else {
+                    totalDots.toDouble()
+                }
+
+                val effectiveChars = if (config.autoCenter) {
+                    (effectiveWidth / dotsPerChar).toInt().coerceAtLeast(1)
+                } else {
+                    config.characterPerLine
+                }
+
+                val actualTextWidthDots = effectiveChars.toDouble() * dotsPerChar
+                val centeringPaddingDots = if (config.autoCenter) {
+                    ((effectiveWidth - actualTextWidthDots) / 2.0).toInt().coerceAtLeast(0)
+                } else {
+                    0
+                }
+
+                val totalLeftMarginDots = config.leftMargin + centeringPaddingDots
+                val marginRatio = totalLeftMarginDots.toFloat() / totalDots.coerceAtLeast(384).toFloat()
+                val marginPadding = (previewWidth.value * marginRatio).dp
+                
+                val contentWidth = if (config.autoCenter) {
+                    previewWidth - (marginPadding * 2)
+                } else {
+                    previewWidth - marginPadding
+                }
+
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 24.dp, vertical = 24.dp)
-                        .verticalScroll(receiptScrollState),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .padding(vertical = 24.dp)
                 ) {
-                    previewBlocks.forEach { block ->
-                        RenderPreviewBlock(block)
+                    Column(
+                        modifier = Modifier
+                            .padding(start = marginPadding)
+                            .width(contentWidth)
+                            .fillMaxHeight()
+                            .verticalScroll(receiptScrollState),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        previewBlocks.forEach { block ->
+                            RenderPreviewBlock(block)
+                        }
+                        Spacer(Modifier.height(40.dp))
                     }
-                    Spacer(Modifier.height(40.dp))
                 }
             }
 
@@ -114,43 +162,69 @@ fun StudioScreen(viewModel: PrinterViewModel) {
 
 @Composable
 private fun RenderPreviewBlock(block: PreviewBlock) {
+    val monoFont = FontFamily.Monospace
+    
     when (block) {
         is PreviewBlock.Text -> {
             Text(
                 text = block.text,
-                color = Color.Black,
+                color = if (block.isInverted) Color.White else Color.Black,
                 fontWeight = if (block.isBold) FontWeight.Black else FontWeight.Normal,
-                fontSize = if (block.isBig) 18.sp else 11.sp,
+                fontSize = 11.sp * block.heightMultiplier,
+                fontFamily = monoFont,
+                textDecoration = if (block.isUnderline) TextDecoration.Underline else TextDecoration.None,
                 textAlign = when (block.alignment) {
                     TextAlignment.CENTER -> TextAlign.Center
                     TextAlignment.RIGHT -> TextAlign.Right
                     else -> TextAlign.Left
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .drawBehind {
+                        if (block.isInverted) drawRect(color = Color.Black)
+                    }
+                    .padding(vertical = (2.dp * block.heightMultiplier))
+                    .graphicsLayer {
+                        scaleX = block.widthMultiplier.toFloat() / block.heightMultiplier.toFloat()
+                        transformOrigin = TransformOrigin(0f, 0.5f)
+                    }
             )
         }
         is PreviewBlock.KeyValue -> {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 1.dp)
+                    .drawBehind {
+                        if (block.isInverted) drawRect(color = Color.Black)
+                    },
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(block.key, color = Color.Gray, fontSize = 10.sp, modifier = Modifier.weight(1f))
+                Text(
+                    block.key, 
+                    color = if (block.isInverted) Color.White else Color.Gray, 
+                    fontSize = 10.sp, 
+                    fontFamily = monoFont,
+                    modifier = Modifier.weight(1f)
+                )
                 Text(
                     block.value, 
-                    color = Color.Black, 
+                    color = if (block.isInverted) Color.White else Color.Black, 
                     fontWeight = if (block.isBold) FontWeight.Bold else FontWeight.Normal, 
-                    fontSize = 11.sp,
+                    fontSize = 10.sp,
+                    fontFamily = monoFont,
                     textAlign = TextAlign.Right
                 )
             }
         }
         is PreviewBlock.Divider -> {
             Text(
-                block.char.toString().repeat(32),
+                text = block.char.toString().repeat(64),
                 color = Color.LightGray,
                 maxLines = 1,
+                fontFamily = monoFont,
                 letterSpacing = 2.sp,
-                modifier = Modifier.padding(vertical = 4.dp)
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
             )
         }
         is PreviewBlock.Barcode -> {
@@ -163,7 +237,7 @@ private fun RenderPreviewBlock(block: PreviewBlock) {
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
             ) {
                 Icon(Icons.Default.ViewWeek, null, Modifier.size(width = 120.dp, height = 40.dp), Color.Black)
-                Text(block.content, color = Color.Gray, fontSize = 8.sp)
+                Text(block.content, color = Color.Gray, fontSize = 9.sp, fontFamily = monoFont)
             }
         }
         is PreviewBlock.QRCode -> {
@@ -176,11 +250,30 @@ private fun RenderPreviewBlock(block: PreviewBlock) {
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
             ) {
                 Icon(Icons.Default.QrCode2, null, Modifier.size(80.dp), Color.Black)
-                Text("SCAN TO VERIFY", color = Color.Black, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                Text("SCAN TO VERIFY", color = Color.Black, fontSize = 9.sp, fontWeight = FontWeight.Bold, fontFamily = monoFont)
             }
         }
         is PreviewBlock.Image -> {
-            Icon(Icons.Default.Image, null, Modifier.size(48.dp).padding(vertical = 8.dp), Color.Gray)
+            Column(
+                horizontalAlignment = when (block.alignment) {
+                    TextAlignment.CENTER -> Alignment.CenterHorizontally
+                    TextAlignment.RIGHT -> Alignment.End
+                    else -> Alignment.Start
+                },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(width = (block.width / 2.5).dp, height = (block.height / 2.5).dp)
+                        .drawBehind { drawRect(Color.LightGray.copy(alpha = 0.2f)) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Image, null, Modifier.size(20.dp), Color.Gray)
+                        Text("${block.width}x${block.height}", fontSize = 8.sp, color = Color.Gray, fontFamily = monoFont)
+                    }
+                }
+            }
         }
         PreviewBlock.Space -> {
             Spacer(Modifier.height(16.dp))

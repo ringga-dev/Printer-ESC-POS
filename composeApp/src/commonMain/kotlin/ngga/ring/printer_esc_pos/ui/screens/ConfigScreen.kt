@@ -22,7 +22,10 @@ import ngga.ring.printer.model.PrinterCharset
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ConfigScreen(viewModel: PrinterViewModel) {
+fun ConfigScreen(
+    viewModel: PrinterViewModel,
+    onLaunchCalibration: () -> Unit
+) {
     val config by viewModel.config.collectAsState()
     val showVirtual by viewModel.showVirtual.collectAsState()
     val scrollState = rememberScrollState()
@@ -74,6 +77,29 @@ fun ConfigScreen(viewModel: PrinterViewModel) {
         // Paper Configuration
         SectionHeader("Paper Configuration", "Define physical output limits")
         Spacer(Modifier.height(16.dp))
+
+        // Calibration Button
+        Surface(
+            onClick = onLaunchCalibration,
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+            shape = MaterialTheme.shapes.large,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.AutoFixHigh, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Auto-Calibration Wizard", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text("Resolve alignment & margin issues automatically", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
+                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
         
         // Presets
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -107,15 +133,25 @@ fun ConfigScreen(viewModel: PrinterViewModel) {
         Spacer(Modifier.height(16.dp))
         
         // Custom Calibration
+        Text(
+            "Manual / Custom Configuration",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
         GlassCard(modifier = Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
-                        value = config.paperWidth.toString(),
-                        onValueChange = { viewModel.updateConfig(config.copy(paperWidth = it.toIntOrNull() ?: 0)) },
+                        value = if (config.paperWidth == 0) "" else config.paperWidth.toString(),
+                        onValueChange = { 
+                            val value = it.toIntOrNull() ?: 0
+                            viewModel.updateConfig(config.copy(paperWidth = value)) 
+                        },
                         label = { Text("Width (mm)") },
                         modifier = Modifier.weight(1f),
                         shape = MaterialTheme.shapes.medium,
+                        placeholder = { Text("e.g. 72") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                     OutlinedTextField(

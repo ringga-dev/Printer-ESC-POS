@@ -38,6 +38,10 @@ class PrinterViewModel : ViewModel() {
     private val _previewBlocks = MutableStateFlow<List<PreviewBlock>>(emptyList())
     val previewBlocks: StateFlow<List<PreviewBlock>> = _previewBlocks.asStateFlow()
 
+    fun resetPrintStatus() {
+        _printStatus.value = PrintStatus.Idle
+    }
+
     init {
         // Update preview when config changes
         _config.onEach { updatePreview(it) }.launchIn(viewModelScope)
@@ -101,6 +105,33 @@ class PrinterViewModel : ViewModel() {
         }
     }
 
+    fun printCalibrationPage() {
+        viewModelScope.launch {
+            val bytes = printer.receiptService.generateCalibrationReceipt(_config.value)
+            printer.printRaw(_config.value, bytes).collect { status ->
+                _printStatus.value = status
+            }
+        }
+    }
+
+    fun applyCalibration(leftMostDot: Int, rightMostDot: Int) {
+        val current = _config.value
+        // If paper starts at leftMostDot (e.g. 40) and ends at rightMostDot (e.g. 580)
+        // Then printable width is 580 - 40 = 540 dots.
+        // We set leftMargin to 40 so dot 0 in code starts at 40 on paper.
+        val newWidth = (rightMostDot - leftMostDot).coerceAtLeast(384)
+        
+        // Suggest chars per line based on standard font (12 dots)
+        val suggestedChars = (newWidth / 12).coerceAtMost(64)
+
+        _config.value = current.copy(
+            leftMargin = leftMostDot,
+            paperWidthDots = newWidth,
+            characterPerLine = suggestedChars,
+            autoCenter = true // Enable by default for calibrated devices
+        )
+    }
+
     fun printExpertTest() {
         viewModelScope.launch {
             val buildConfig = _config.value
@@ -127,9 +158,6 @@ class PrinterViewModel : ViewModel() {
         }
     }
 
-    fun resetPrintStatus() {
-        _printStatus.value = PrintStatus.Idle
-    }
 
     private fun updatePreview(config: PrinterConfig) {
         _previewBlocks.value = printer.receiptService.generateTestPreview(config)

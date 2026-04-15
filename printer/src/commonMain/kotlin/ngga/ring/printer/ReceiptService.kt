@@ -28,6 +28,35 @@ class ReceiptService {
         return getTestBuilder(config).buildPreview()
     }
 
+    fun generateCalibrationReceipt(config: ngga.ring.printer.model.PrinterConfig): ByteArray {
+        // Determine safe maximum dots based on selected paper class
+        val is80mm = config.paperWidth >= 80
+        val maxDots = if (is80mm) 640 else 440
+        val charsPerLine = if (is80mm) 64 else 42
+
+        val builder = ESCPosCommandBuilder(
+            ngga.ring.printer.util.escpos.ESCPosConfig(
+                charsPerLine = charsPerLine,
+                paperWidthDots = maxDots
+            )
+        ).initialize()
+
+        builder.alignCenter().bold(true).line("HARDWARE CALIBRATION WIZARD").bold(false)
+            .line("Paper Class Detector: ${if (is80mm) "80mm" else "58mm"}")
+            .line("Look at the ruler below and identify the")
+            .line("left-most and right-most visible dots.")
+            .feed(1)
+            .printRuler()
+            .feed(1)
+            .line("Common Limits Info:")
+            .line("58mm paper: usually 384 dots")
+            .line("80mm paper: usually 560-576 dots")
+            .feedLines(3)
+            .cut()
+
+        return builder.build()
+    }
+
     private fun getTestBuilder(config: ngga.ring.printer.model.PrinterConfig): ESCPosCommandBuilder {
         val builder = ESCPosCommandBuilder.fromPrinterConfig(config).initialize()
         
@@ -60,6 +89,12 @@ class ReceiptService {
             .line(storeName)
             .normalFont()
             .bold(false)
+            .underline(true)
+            .line("Official Receipt")
+            .underline(false)
+            .invert(true)
+            .line(" *** COPY *** ")
+            .invert(false)
 
         for (addr in address) {
             builder.line(addr)

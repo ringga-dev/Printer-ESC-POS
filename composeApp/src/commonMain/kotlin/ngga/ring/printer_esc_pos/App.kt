@@ -28,6 +28,7 @@ import ngga.ring.printer_esc_pos.viewmodel.PrinterViewModel
 @Composable
 fun App(viewModel: PrinterViewModel = viewModel { PrinterViewModel() }) {
     var selectedTab by remember { mutableStateOf(0) }
+    var currentSubScreen by remember { mutableStateOf<String?>(null) }
     val connectionState by viewModel.connectionState.collectAsState()
     val config by viewModel.config.collectAsState()
 
@@ -83,16 +84,23 @@ fun App(viewModel: PrinterViewModel = viewModel { PrinterViewModel() }) {
                 )
 
                 AnimatedContent(
-                    targetState = selectedTab,
+                    targetState = currentSubScreen ?: selectedTab.toString(),
                     transitionSpec = {
-                        fadeIn(tween(400)) + slideInHorizontally { if (targetState > initialState) it else -it } togetherWith
-                        fadeOut(tween(400)) + slideOutHorizontally { if (targetState > initialState) -it else it }
+                        fadeIn(tween(400)) + slideInHorizontally { if (targetState != "null") it else -it } togetherWith
+                        fadeOut(tween(400)) + slideOutHorizontally { if (targetState != "null") -it else it }
                     }
-                ) { tab ->
-                    when (tab) {
-                        0 -> DiscoveryScreen(viewModel)
-                        1 -> StudioScreen(viewModel)
-                        2 -> ConfigScreen(viewModel)
+                ) { target ->
+                    when (target) {
+                        "0" -> DiscoveryScreen(viewModel)
+                        "1" -> StudioScreen(viewModel)
+                        "2" -> ConfigScreen(
+                            viewModel = viewModel,
+                            onLaunchCalibration = { currentSubScreen = "calibration" }
+                        )
+                        "calibration" -> CalibrationScreen(
+                            viewModel = viewModel,
+                            onBack = { currentSubScreen = null }
+                        )
                     }
                 }
             }

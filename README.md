@@ -40,10 +40,20 @@ Agar library dapat berjalan dengan optimal, pastikan proyek Anda memenuhi syarat
 | Fitur | Penjelasan | Status |
 | :--- | :--- | :---: |
 | **KMP Unified** | Satu kode untuk Android, iOS, dan Desktop. | ✅ |
-| **Safety Buffer** | Mencegah teks terpotong atau "tumpah" ke baris baru secara tidak sengaja. | ✅ |
-| **Floyd-Dithering** | Cetak gambar/logo dengan gradasi halus (bukan hitam-putih kasar). | ✅ |
-| **Auto-Calibration** | Alat bantu `printRuler()` untuk mencari lebar kertas (dots) yang presisi. | ✅ |
-| **Reactive Discovery** | Scan printer berbasis `Kotlin Flow` untuk UI yang responsif. | ✅ |
+| **Native Barcode/QR** | Cetak QR & Barcode tajam via hardware (v2.0). | ✅ |
+| **USB OTG** | Dukungan kabel USB di Android (v2.0). | ✅ |
+| **Visual Preview** | Lihat struk di layar sebelum diprint (v2.0). | ✅ |
+| **Auto-Discovery** | Scan otomatis printer di jaringan/IP. | ✅ |
+| **Floyd-Dithering** | Cetak gambar dengan gradasi halus. | ✅ |
+
+---
+
+## 💎 KmpPrinter V2.0 (New!)
+Versi terbaru kini hadir dengan fitur-fitur "Expert" untuk implementasi kelas industri.
+
+👉 **[LIHAT DOKUMENTASI FITUR V2.0](./DOCS_V2.md)**
+
+---
 
 ---
 

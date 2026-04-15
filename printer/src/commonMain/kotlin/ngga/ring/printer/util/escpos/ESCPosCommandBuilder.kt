@@ -1,5 +1,8 @@
 package ngga.ring.printer.util.escpos
 
+import ngga.ring.printer.util.platform.encodeString
+import ngga.ring.printer.util.preview.PreviewBlock
+
 /**
  * A pure Kotlin, KMP-friendly ESC/POS command builder.
  *
@@ -19,17 +22,28 @@ class ESCPosCommandBuilder(
                 // Heuristic: (PaperWidth - 10mm margin) * 8 dots/mm
                 ((config.paperWidth - 10) * 8).coerceAtLeast(384)
             }
+            val printWidth = if (config.autoCenter) {
+                (dots - (2 * config.leftMargin)).coerceAtLeast(1)
+            } else {
+                dots
+            }
+
             return ESCPosCommandBuilder(
                 ESCPosConfig(
                     charsPerLine = config.characterPerLine,
-                    paperWidthDots = dots
+                    paperWidthDots = printWidth,
+                    leftMargin = config.leftMargin
                 )
             )
         }
     }
 
     private val buffer = mutableListOf<Byte>()
+    private val previewBlocks = mutableListOf<PreviewBlock>()
     private var currentWidthMultiplier = 1
+    private var currentHeightMultiplier = 1
+    private var isBold = false
+    private var isUnderline = false
     private var currentAlignment = TextAlignment.LEFT
 
     /**
@@ -38,12 +52,28 @@ class ESCPosCommandBuilder(
      */
     fun build(): ByteArray = buffer.toByteArray()
 
+    /**
+     * Returns a logical list of blocks representing the receipt for UI preview.
+     */
+    fun buildPreview(): List<PreviewBlock> = previewBlocks.toList()
+
     /* ------------------------------------------------------------
      * High-level text helpers
      * ------------------------------------------------------------ */
 
     /** Writes a text line followed by a line feed (LF). Applies safety margin to prevent hardware wrapping. */
     fun line(text: String = ""): ESCPosCommandBuilder {
+        if (text.isEmpty()) {
+            previewBlocks.add(PreviewBlock.Space)
+        } else {
+            previewBlocks.add(PreviewBlock.Text(
+                text = text,
+                alignment = currentAlignment,
+                isBold = isBold,
+                isBig = currentWidthMultiplier > 1,
+                isUnderline = isUnderline
+            ))
+        }
         val safeMax = (config.charsPerLine / currentWidthMultiplier - 1).coerceAtLeast(1)
         val safeText = if (text.length > safeMax) text.take(safeMax) else text
         writeText(safeText)
@@ -67,13 +97,18 @@ class ESCPosCommandBuilder(
     }
 
     /** Writes an empty line separator. */
-    fun breakLine(): ESCPosCommandBuilder = line()
+    fun breakLine(): ESCPosCommandBuilder {
+        previewBlocks.add(PreviewBlock.Space)
+        writeLF()
+        return this
+    }
 
     fun segmentedLine(
         left: String,
         right: String,
         maxCharsPerLine: Int = config.charsPerLine / currentWidthMultiplier
     ): ESCPosCommandBuilder {
+        previewBlocks.add(PreviewBlock.KeyValue(left, right, isBold))
         writeText(ESCPosTextLayout.segmentedText(left, right, maxCharsPerLine))
         writeLF()
         return this
@@ -105,6 +140,7 @@ class ESCPosCommandBuilder(
 
     /** Prints a divider line using a specific character. Forces left alignment. */
     fun divider(char: Char = '-'): ESCPosCommandBuilder {
+        previewBlocks.add(PreviewBlock.Divider(char))
         val prevAlign = currentAlignment
         setAlignment(TextAlignment.LEFT)
         val safeMax = (config.charsPerLine / currentWidthMultiplier - 1).coerceAtLeast(1)
@@ -166,7 +202,10 @@ class ESCPosCommandBuilder(
 
     /** Feeds N empty lines. */
     fun feed(lines: Int = 1): ESCPosCommandBuilder {
-        repeat(lines.coerceAtLeast(0)) { writeLF() }
+        repeat(lines.coerceAtLeast(0)) { 
+            previewBlocks.add(PreviewBlock.Space)
+            writeLF() 
+        }
         return this
     }
 
@@ -212,25 +251,23 @@ class ESCPosCommandBuilder(
      */
     fun barcode(
         data: String,
-        type: Int = 73,
         height: Int = 162,
         width: Int = 3,
         center: Boolean = false
     ): ESCPosCommandBuilder {
         if (center) alignCenter()
-
+        previewBlocks.add(PreviewBlock.Barcode(data, currentAlignment))
+        
         // Set height
         writeRaw(0x1D, 0x68, height.coerceIn(1, 255))
         // Set width
         writeRaw(0x1D, 0x77, width.coerceIn(2, 6))
-
-        // Print barcode (System B)
-        // System B: [1D 6B m n d1...dn]
-        // m = 73 (CODE128), n = length of data
+        
+        // Print barcode (System B: 1D 6B 49 n d1...dn)
         val bytes = data.encodeToByteArray()
-        writeRaw(0x1D, 0x6B, type, bytes.size)
+        writeRaw(0x1D, 0x6B, 73, bytes.size)
         writeBytes(bytes)
-
+        
         if (center) alignLeft()
         return this
     }
@@ -245,6 +282,7 @@ class ESCPosCommandBuilder(
      */
     fun qrCodeNative(data: String, size: Int = 8, center: Boolean = false): ESCPosCommandBuilder {
         if (center) alignCenter()
+        previewBlocks.add(PreviewBlock.QRCode(data, currentAlignment))
 
         val bytes = data.encodeToByteArray()
         val numBytes = bytes.size + 3
@@ -298,11 +336,13 @@ class ESCPosCommandBuilder(
     }
 
     fun bold(enabled: Boolean): ESCPosCommandBuilder {
+        this.isBold = enabled
         if (enabled) boldOn() else boldOff()
         return this
     }
 
     fun underline(enabled: Boolean): ESCPosCommandBuilder {
+        this.isUnderline = enabled
         if (enabled) underlineOn() else underlineOff()
         return this
     }
@@ -357,7 +397,19 @@ class ESCPosCommandBuilder(
     /** Sends the ESC @ command (printer reset/initialize). */
     fun initialize(): ESCPosCommandBuilder {
         writeRaw(0x1B, 0x40) // Reset
+        setLeftMargin(config.leftMargin)
         setPrintableAreaWidth(config.paperWidthDots) // Align hardware to paper size
+        return this
+    }
+
+    /**
+     * Sets the left margin of the printable area. (GS L nL nH)
+     * n = nL + nH * 256
+     */
+    fun setLeftMargin(dots: Int): ESCPosCommandBuilder {
+        val nL = dots % 256
+        val nH = dots / 256
+        writeRaw(0x1D, 0x4C, nL, nH)
         return this
     }
 
@@ -435,7 +487,7 @@ class ESCPosCommandBuilder(
 
     private fun writeText(text: String) {
         if (text.isNotEmpty()) {
-            val bytes = ngga.ring.printer.util.encodeString(text, config.charset)
+            val bytes = ngga.ring.printer.util.platform.encodeString(text, config.charset)
             writeBytes(bytes)
         }
     }

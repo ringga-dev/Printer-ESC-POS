@@ -1,6 +1,7 @@
 package ngga.ring.printer
 
 import ngga.ring.printer.util.escpos.ESCPosCommandBuilder
+import ngga.ring.printer.util.preview.PreviewBlock
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.datetime.*
@@ -17,6 +18,17 @@ class ReceiptService {
      * Generates a comprehensive hardware test page adapted to printer configuration.
      */
     fun generateTestPrint(config: ngga.ring.printer.model.PrinterConfig): ByteArray {
+        return getTestBuilder(config).build()
+    }
+
+    /**
+     * Generates a logical preview of the test page for UI display.
+     */
+    fun generateTestPreview(config: ngga.ring.printer.model.PrinterConfig): List<PreviewBlock> {
+        return getTestBuilder(config).buildPreview()
+    }
+
+    private fun getTestBuilder(config: ngga.ring.printer.model.PrinterConfig): ESCPosCommandBuilder {
         val builder = ESCPosCommandBuilder.fromPrinterConfig(config).initialize()
         
         // Sample receipt data
@@ -89,7 +101,7 @@ class ReceiptService {
             .barcode(orderNumber)
             .feed(1)
             
-        return builder.feedLines(3).cut().build()
+        return builder.feedLines(3).cut()
     }
 
     private fun formatTimestamp(timestamp: Long): String {

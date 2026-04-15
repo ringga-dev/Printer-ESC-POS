@@ -10,6 +10,9 @@ data class ESCPosConfig(
     /** Printable area width in dots (e.g., 384 for 58mm, 576 for 80mm). */
     val paperWidthDots: Int = 384,
 
+    /** Left margin in dots. */
+    val leftMargin: Int = 0,
+
     /** Charset for encoding text. ESC/POS typically uses CP437, but UTF-8 is often supported. */
     val charset: String = "UTF-8"
 )

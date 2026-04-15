@@ -37,9 +37,9 @@ fun GlassCard(
             )
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
-            content = content
+            modifier = Modifier.padding(20.dp)
         ) {
+            content()
         }
     }
 }
@@ -73,7 +73,7 @@ fun ConnectionBadge(isConnected: Boolean, name: String?) {
     val color = if (isConnected) PrinterColors.Emerald else PrinterColors.TextDisabled
     Surface(
         color = color.copy(alpha = 0.1f),
-        shape = RoundedCornerShape(full = true),
+        shape = RoundedCornerShape(percent = 50),
         border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.3f))
     ) {
         Row(
@@ -83,7 +83,7 @@ fun ConnectionBadge(isConnected: Boolean, name: String?) {
             Box(
                 modifier = Modifier
                     .size(6.dp)
-                    .background(color, RoundedCornerShape(full = true))
+                    .background(color, RoundedCornerShape(percent = 50))
             )
             Spacer(Modifier.width(8.dp))
             Text(

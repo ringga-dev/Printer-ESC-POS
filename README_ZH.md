@@ -40,10 +40,20 @@ KmpPrinter 是一款高性能的 ESC/POS 热敏打印库，旨在轻松集成到
 | 特性 | 说明 | 状态 |
 | :--- | :--- | :---: |
 | **KMP 统一** | 一套代码支持 Android, iOS, 和 Desktop。 | ✅ |
-| **安全缓冲区** | 自动防止文本截断或不必要的自动换行。 | ✅ |
-| **Floyd 抖动算法** | 以平滑的渐变色打印图像/Logo（非粗糙黑白）。 | ✅ |
-| **自动校准** | 内置 `printRuler()` 工具，寻找精确的打印点宽。 | ✅ |
-| **响应式扫描** | 基于 `Kotlin Flow` 的打印机扫描，适用于响应式 UI。 | ✅ |
+| **原生条码/QR** | 基于硬件指令的高清 QR & 条码 (v2.0)。 | ✅ |
+| **USB OTG** | 支持 Android 平板的 USB 线联打印 (v2.0)。 | ✅ |
+| **实时预览** | 在 App 内动态预览小票样式 (v2.0)。 | ✅ |
+| **自动发现** | 基于网络的 IP 打印机自动扫描。 | ✅ |
+| **Floyd 抖动算法** | 以平滑的渐变色打印图像。 | ✅ |
+
+---
+
+## 💎 KmpPrinter V2.0 (新发布!)
+最新版本包含专为工业级 POS 实施设计的“专家级”功能。
+
+👉 **[浏览 V2.0 功能文档](./DOCS_V2_ZH.md)**
+
+---
 
 ---
 
@@ -122,4 +132,4 @@ printer.printRaw(config, commands).collect { status ->
 *   [贡献与许可](./CONTRIBUTING.md)
 
 ---
-Developed with ❤️ by **Ringga**
+Developed with ❤️ by **Ringga Dev**

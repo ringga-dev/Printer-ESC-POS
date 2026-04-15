@@ -12,9 +12,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import ngga.ring.printer_esc_pos.ui.components.GlassCard
 import ngga.ring.printer_esc_pos.ui.components.SectionHeader
 import ngga.ring.printer_esc_pos.viewmodel.PrinterViewModel
+
+import ngga.ring.printer.model.PrinterCharset
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,6 +26,8 @@ fun ConfigScreen(viewModel: PrinterViewModel) {
     val config by viewModel.config.collectAsState()
     val showVirtual by viewModel.showVirtual.collectAsState()
     val scrollState = rememberScrollState()
+    
+    var charsetExpanded by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -68,6 +74,8 @@ fun ConfigScreen(viewModel: PrinterViewModel) {
         // Paper Configuration
         SectionHeader("Paper Configuration", "Define physical output limits")
         Spacer(Modifier.height(16.dp))
+        
+        // Presets
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             listOf(58, 80).forEach { width ->
                 val isSelected = config.paperWidth == width
@@ -75,11 +83,11 @@ fun ConfigScreen(viewModel: PrinterViewModel) {
                     onClick = {
                         viewModel.updateConfig(config.copy(
                             paperWidth = width,
-                            characterPerLine = if (width == 80) 48 else 32,
+                            characterPerLine = if (width == 80) 42 else 31,
                             paperWidthDots = if (width == 80) 576 else 384
                         ))
                     },
-                    modifier = Modifier.weight(1f).height(80.dp),
+                    modifier = Modifier.weight(1f).height(64.dp),
                     shape = MaterialTheme.shapes.large,
                     colors = CardDefaults.elevatedCardColors(
                         containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
@@ -88,10 +96,71 @@ fun ConfigScreen(viewModel: PrinterViewModel) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
                             "${width}mm",
-                            fontWeight = FontWeight.Black,
+                            fontWeight = FontWeight.Bold,
                             color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                         )
                     }
+                }
+            }
+        }
+        
+        Spacer(Modifier.height(16.dp))
+        
+        // Custom Calibration
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = config.paperWidth.toString(),
+                        onValueChange = { viewModel.updateConfig(config.copy(paperWidth = it.toIntOrNull() ?: 0)) },
+                        label = { Text("Width (mm)") },
+                        modifier = Modifier.weight(1f),
+                        shape = MaterialTheme.shapes.medium,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    OutlinedTextField(
+                        value = config.characterPerLine.toString(),
+                        onValueChange = { viewModel.updateConfig(config.copy(characterPerLine = it.toIntOrNull() ?: 0)) },
+                        label = { Text("Chars/Line") },
+                        modifier = Modifier.weight(1f),
+                        shape = MaterialTheme.shapes.medium,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
+                
+                OutlinedTextField(
+                    value = config.paperWidthDots.toString(),
+                    onValueChange = { viewModel.updateConfig(config.copy(paperWidthDots = it.toIntOrNull() ?: 0)) },
+                    label = { Text("Max Print Area (Dots)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    supportingText = { Text("Set to 0 for auto-calculation based on width") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+
+                OutlinedTextField(
+                    value = config.leftMargin.toString(),
+                    onValueChange = { viewModel.updateConfig(config.copy(leftMargin = it.toIntOrNull() ?: 0)) },
+                    label = { Text("Left Margin (Dots)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    supportingText = { Text("Adjust this if print is offset to the left or right") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Auto Center", fontWeight = FontWeight.Bold)
+                        Text("Balances left and right margins automatically", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(
+                        checked = config.autoCenter,
+                        onCheckedChange = { viewModel.updateConfig(config.copy(autoCenter = it)) }
+                    )
                 }
             }
         }
@@ -103,13 +172,36 @@ fun ConfigScreen(viewModel: PrinterViewModel) {
         Spacer(Modifier.height(16.dp))
         GlassCard(modifier = Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedTextField(
-                    value = config.charsetName,
-                    onValueChange = { viewModel.updateConfig(config.copy(charsetName = it)) },
-                    label = { Text("Charset Name (e.g. UTF-8, GBK)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium
-                )
+                ExposedDropdownMenuBox(
+                    expanded = charsetExpanded,
+                    onExpandedChange = { charsetExpanded = !charsetExpanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = config.charsetName,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Library Charset") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = charsetExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = charsetExpanded,
+                        onDismissRequest = { charsetExpanded = false }
+                    ) {
+                        PrinterCharset.entries.forEach { charset ->
+                            DropdownMenuItem(
+                                text = { Text(charset.value) },
+                                onClick = {
+                                    viewModel.updateConfig(config.copy(charsetName = charset.value))
+                                    charsetExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
                 
                 OutlinedTextField(
                     value = config.escPosCodePage.toInt().toString(16).uppercase(),

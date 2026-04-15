@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import ngga.ring.printer.manager.PrinterConnector
 import ngga.ring.printer.manager.PrinterConnectorFactory
+import ngga.ring.printer.manager.PrinterPermissionManager
 import ngga.ring.printer.util.escpos.ESCPosCommandBuilder
 
 /**
@@ -24,9 +25,15 @@ class KmpPrinter {
     val connectorFactory = PrinterConnectorFactory()
     
     /**
+     * Platform-independent utility for managing printer-related permissions.
+     */
+    private val permissionManager = PrinterPermissionManager()
+    
+    /**
      * Managed connector instance.
      */
     private var activeConnector: PrinterConnector? = null
+    private var activeConfig: PrinterConfig? = null
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     
@@ -34,6 +41,19 @@ class KmpPrinter {
      * Observe the current connection status of the printer.
      */
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
+
+    /**
+     * Checks and requests the necessary permissions for discovery and printing.
+     * @param type The connection type (e.g., "BLUETOOTH", "USB", "NETWORK").
+     * @param onResult Callback with the final permission state.
+     */
+    fun checkAndRequestPermissions(type: String, onResult: (Boolean) -> Unit) {
+        if (permissionManager.hasPermissions(type)) {
+            onResult(true)
+        } else {
+            permissionManager.requestPermissions(type, onResult)
+        }
+    }
 
     val receiptService = ReceiptService()
 
@@ -78,7 +98,18 @@ class KmpPrinter {
      * @param data The raw byte array to send.
      */
     fun printRaw(config: PrinterConfig, data: ByteArray): Flow<PrintStatus> = flow {
-        val connector = activeConnector ?: connectorFactory.create(config).also { activeConnector = it }
+        // Fix: Recreate connector if type or address changed
+        val shouldRecreate = activeConnector == null || 
+                activeConfig?.connectionType != config.connectionType ||
+                activeConfig?.address != config.address
+
+        val connector = if (shouldRecreate) {
+            activeConnector?.disconnect()
+            activeConfig = config
+            connectorFactory.create(config).also { activeConnector = it }
+        } else {
+            activeConnector!!
+        }
         
         try {
             if (!connector.isConnected()) {

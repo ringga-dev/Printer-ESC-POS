@@ -17,12 +17,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ngga.ring.printer.model.PrintStatus
 import ngga.ring.printer_esc_pos.viewmodel.PrinterViewModel
+import ngga.ring.printer.util.preview.PreviewBlock
+import ngga.ring.printer.util.escpos.TextAlignment
 
 @Composable
 fun StudioScreen(viewModel: PrinterViewModel) {
     val config by viewModel.config.collectAsState()
     val printStatus by viewModel.printStatus.collectAsState()
     val connectionState by viewModel.connectionState.collectAsState()
+    val previewBlocks by viewModel.previewBlocks.collectAsState()
+    val receiptScrollState = rememberScrollState()
 
     Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
         Text(
@@ -56,37 +60,16 @@ fun StudioScreen(viewModel: PrinterViewModel) {
                 shape = MaterialTheme.shapes.large
             ) {
                 Column(
-                    modifier = Modifier.padding(24.dp).fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp, vertical = 24.dp)
+                        .verticalScroll(receiptScrollState),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("KMP-PRINTER V2", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 18.sp)
-                    Text("Expert Multiplatform Engine", color = Color.Gray, fontSize = 10.sp)
-                    
-                    Spacer(Modifier.height(16.dp))
-                    Text("-".repeat(config.characterPerLine), color = Color.LightGray, maxLines = 1)
-                    
-                    ReceiptRow("Target Hardware:", config.name)
-                    ReceiptRow("Connection:", config.connectionType)
-                    ReceiptRow("Paper Width:", "${config.paperWidth}mm")
-                    
-                    Spacer(Modifier.height(20.dp))
-                    repeat(3) {
-                        ReceiptRow("Sample Product ${it+1}", "Rp 25.000")
+                    previewBlocks.forEach { block ->
+                        RenderPreviewBlock(block)
                     }
-                    
-                    Spacer(Modifier.height(16.dp))
-                    Text("-".repeat(config.characterPerLine), color = Color.LightGray, maxLines = 1)
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("TOTAL", color = Color.Black, fontWeight = FontWeight.Black)
-                        Text("Rp 75.000", color = Color.Black, fontWeight = FontWeight.Black)
-                    }
-                    
-                    Spacer(Modifier.weight(1f))
-                    Icon(Icons.Default.QrCode2, null, Modifier.size(64.dp), Color.Black)
-                    Text("SCAN TO VERIFY", color = Color.Black, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(40.dp))
                 }
             }
 
@@ -99,7 +82,7 @@ fun StudioScreen(viewModel: PrinterViewModel) {
         Spacer(Modifier.height(24.dp))
 
         // Actions
-        val isReady = config.address.isNotEmpty() || config.connectionType == "VIRTUAL"
+        val isReady = config.address?.isNotEmpty() == true || config.connectionType == "VIRTUAL"
         Row(
             modifier = Modifier.fillMaxWidth().height(64.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -130,13 +113,78 @@ fun StudioScreen(viewModel: PrinterViewModel) {
 }
 
 @Composable
-private fun ReceiptRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, color = Color.Black, fontSize = 10.sp)
-        Text(value, color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+private fun RenderPreviewBlock(block: PreviewBlock) {
+    when (block) {
+        is PreviewBlock.Text -> {
+            Text(
+                text = block.text,
+                color = Color.Black,
+                fontWeight = if (block.isBold) FontWeight.Black else FontWeight.Normal,
+                fontSize = if (block.isBig) 18.sp else 11.sp,
+                textAlign = when (block.alignment) {
+                    TextAlignment.CENTER -> TextAlign.Center
+                    TextAlignment.RIGHT -> TextAlign.Right
+                    else -> TextAlign.Left
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        is PreviewBlock.KeyValue -> {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(block.key, color = Color.Gray, fontSize = 10.sp, modifier = Modifier.weight(1f))
+                Text(
+                    block.value, 
+                    color = Color.Black, 
+                    fontWeight = if (block.isBold) FontWeight.Bold else FontWeight.Normal, 
+                    fontSize = 11.sp,
+                    textAlign = TextAlign.Right
+                )
+            }
+        }
+        is PreviewBlock.Divider -> {
+            Text(
+                block.char.toString().repeat(32),
+                color = Color.LightGray,
+                maxLines = 1,
+                letterSpacing = 2.sp,
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
+        }
+        is PreviewBlock.Barcode -> {
+            Column(
+                horizontalAlignment = when (block.alignment) {
+                    TextAlignment.CENTER -> Alignment.CenterHorizontally
+                    TextAlignment.RIGHT -> Alignment.End
+                    else -> Alignment.Start
+                },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
+            ) {
+                Icon(Icons.Default.ViewWeek, null, Modifier.size(width = 120.dp, height = 40.dp), Color.Black)
+                Text(block.content, color = Color.Gray, fontSize = 8.sp)
+            }
+        }
+        is PreviewBlock.QRCode -> {
+            Column(
+                horizontalAlignment = when (block.alignment) {
+                    TextAlignment.CENTER -> Alignment.CenterHorizontally
+                    TextAlignment.RIGHT -> Alignment.End
+                    else -> Alignment.Start
+                },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
+            ) {
+                Icon(Icons.Default.QrCode2, null, Modifier.size(80.dp), Color.Black)
+                Text("SCAN TO VERIFY", color = Color.Black, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        is PreviewBlock.Image -> {
+            Icon(Icons.Default.Image, null, Modifier.size(48.dp).padding(vertical = 8.dp), Color.Gray)
+        }
+        PreviewBlock.Space -> {
+            Spacer(Modifier.height(16.dp))
+        }
     }
 }
 
@@ -166,12 +214,12 @@ fun StatusDialog(status: PrintStatus, onDismiss: () -> Unit) {
                     )
                 }
                 PrintStatus.Success -> {
-                    Icon(Icons.Default.CheckCircle, null, Modifier.size(64.dp), color = MaterialTheme.colorScheme.secondary)
+                    Icon(Icons.Default.CheckCircle, null, Modifier.size(64.dp), tint = MaterialTheme.colorScheme.secondary)
                     Text("PRINT SUCCESS", fontWeight = FontWeight.Black, modifier = Modifier.padding(top = 16.dp))
                     Button(onClick = onDismiss, Modifier.padding(top = 24.dp).fillMaxWidth()) { Text("BACK") }
                 }
                 is PrintStatus.Error -> {
-                    Icon(Icons.Default.Error, null, Modifier.size(64.dp), color = MaterialTheme.colorScheme.error)
+                    Icon(Icons.Default.Error, null, Modifier.size(64.dp), tint = MaterialTheme.colorScheme.error)
                     Text("PRINT FAILED", fontWeight = FontWeight.Black, modifier = Modifier.padding(top = 16.dp))
                     Text(status.message, fontSize = 11.sp, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Button(onClick = onDismiss, Modifier.padding(top = 24.dp).fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("RETRY") }

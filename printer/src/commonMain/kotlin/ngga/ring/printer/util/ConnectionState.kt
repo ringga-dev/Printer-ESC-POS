@@ -16,9 +16,10 @@ sealed class ConnectionState {
         val address: String?
     ) : ConnectionState()
 
-    /** Connection failed or was lost. */
     data class Error(
         val message: String,
         val throwable: Throwable? = null
     ) : ConnectionState()
+
+    fun isConnected(): Boolean = this is Connected
 }

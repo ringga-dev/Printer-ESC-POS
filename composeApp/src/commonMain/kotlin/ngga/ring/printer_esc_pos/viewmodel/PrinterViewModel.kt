@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import ngga.ring.printer.KmpPrinter
+import ngga.ring.printer.util.preview.PreviewBlock
 import ngga.ring.printer.model.*
 import ngga.ring.printer.util.ConnectionState
 
@@ -34,7 +35,13 @@ class PrinterViewModel : ViewModel() {
     private val _printStatus = MutableStateFlow<PrintStatus>(PrintStatus.Idle)
     val printStatus: StateFlow<PrintStatus> = _printStatus.asStateFlow()
 
+    private val _previewBlocks = MutableStateFlow<List<PreviewBlock>>(emptyList())
+    val previewBlocks: StateFlow<List<PreviewBlock>> = _previewBlocks.asStateFlow()
+
     init {
+        // Update preview when config changes
+        _config.onEach { updatePreview(it) }.launchIn(viewModelScope)
+        
         // Start auto-discovery when mode changes
         combine(_discoveryMode, _showVirtual) { mode, virtual -> mode to virtual }
             .onEach { (mode, virtual) ->
@@ -51,6 +58,18 @@ class PrinterViewModel : ViewModel() {
     }
 
     private fun startDiscovery(mode: String, showVirtual: Boolean) {
+        viewModelScope.launch {
+            printer.checkAndRequestPermissions(mode) { granted ->
+                if (granted) {
+                    doDiscovery(mode, showVirtual)
+                } else {
+                    _discoveryLog.value = "Permission denied. Please enable in settings."
+                }
+            }
+        }
+    }
+
+    private fun doDiscovery(mode: String, showVirtual: Boolean) {
         viewModelScope.launch {
             val discoveryConfig = DiscoveryConfig(showVirtualDevices = showVirtual)
             printer.discovery(mode, discoveryConfig) { log ->
@@ -110,5 +129,9 @@ class PrinterViewModel : ViewModel() {
 
     fun resetPrintStatus() {
         _printStatus.value = PrintStatus.Idle
+    }
+
+    private fun updatePreview(config: PrinterConfig) {
+        _previewBlocks.value = printer.receiptService.generateTestPreview(config)
     }
 }

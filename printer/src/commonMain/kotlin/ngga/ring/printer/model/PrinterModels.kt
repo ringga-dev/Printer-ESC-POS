@@ -11,7 +11,9 @@ data class PrinterConfig(
     val port: Int = 9100,
     val characterPerLine: Int = 31,
     val paperWidth: Int = 58,
-    val paperWidthDots: Int = 0, // Optional: Set explicitly for custom sizes
+    val paperWidthDots: Int = 0, // Physical Hardware Dots (e.g. 384 or 576)
+    val leftMargin: Int = 0,
+    val autoCenter: Boolean = false,
     val charsetName: String = "UTF-8",
     val escPosCodePage: Byte = 0x00
 )

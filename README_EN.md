@@ -40,10 +40,20 @@ To ensure optimal performance, verify that your project meets the following requ
 | Feature | Description | Status |
 | :--- | :--- | :---: |
 | **KMP Unified** | One codebase for Android, iOS, and Desktop. | ✅ |
-| **Safety Buffer** | Prevents text truncation or unintended line-wraps automatically. | ✅ |
-| **Floyd-Dithering** | Print images/logos with smooth gradients (no harsh black-and-white). | ✅ |
-| **Auto-Calibration** | Built-in `printRuler()` tool to find precise paper dot-width. | ✅ |
-| **Reactive Discovery** | `Kotlin Flow` based printer scanning for responsive UIs. | ✅ |
+| **Native Barcode/QR** | High-res QR & Barcode via hardware (v2.0). | ✅ |
+| **USB OTG** | USB Cable support for Android tablets (v2.0). | ✅ |
+| **Visual Preview** | Dynamic UI receipt preview in-app (v2.0). | ✅ |
+| **Auto-Discovery** | Reactive network/IP printer scanning. | ✅ |
+| **Floyd-Dithering** | Smooth gradient image printing. | ✅ |
+
+---
+
+## 💎 KmpPrinter V2.0 (New!)
+The latest version is packed with "Expert" features for industrial-grade POS implementations.
+
+👉 **[BROWSE V2.0 FEATURE DOCS](./DOCS_V2_EN.md)**
+
+---
 
 ---
 

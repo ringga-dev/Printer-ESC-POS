@@ -19,31 +19,54 @@ class VirtualPrinterConnector : PrinterConnector {
     override suspend fun sendData(data: ByteArray): Boolean {
         if (!connected) return false
 
-        val sb = StringBuilder()
-        sb.append("\n┌────────────────────────────────────────────────┐\n")
-        sb.append("│             VIRTUAL PRINTER OUTPUT             │\n")
-        sb.append("├────────────────────────────────────────────────┤\n")
-        sb.append("│ ")
+        Napier.d("┌──────────────────────────────────────────┐")
+        Napier.d("│             VIRTUAL RECEIPT              │")
+        Napier.d("├──────────────────────────────────────────┤")
 
+        var line = StringBuilder("│ ")
         data.forEach { byte ->
-            when (byte) {
-                0x0A.toByte() -> { // Line Feed
-                    sb.append(" <LF>\n│ ")
+            val b = byte.toInt() and 0xFF
+            when (b) {
+                0x0A -> {
+                    // Line Feed: Close current line and print ENTER
+                    val currentText = line.toString()
+                    val padding = 43 - currentText.length
+                    if (padding > 0) line.append(" ".repeat(padding))
+                    line.append("│")
+                    Napier.d(line.toString())
+                    
+                    Napier.d("│ [ENTER]                                 │")
+                    line = StringBuilder("│ ")
                 }
-                0x1B.toByte() -> sb.append("<ESC>")
-                0x1D.toByte() -> sb.append("<GS>")
-                in 32..126 -> sb.append(byte.toInt().toChar()) // Readable ASCII
+                in 0x20..0x7E -> {
+                    line.append(b.toChar())
+                    if (line.length >= 42) {
+                        line.append("│")
+                        Napier.d(line.toString())
+                        line = StringBuilder("│ ")
+                    }
+                }
                 else -> {
-                    // Show hex for non-readable bytes
-                    val hex = byte.toInt().and(0xFF).toString(16).uppercase().padStart(2, '0')
-                    sb.append("[%${hex}]")
+                    val hex = String.format("\\x%02X", b)
+                    line.append(hex)
+                    if (line.length >= 42) {
+                        line.append("│")
+                        Napier.d(line.toString())
+                        line = StringBuilder("│ ")
+                    }
                 }
             }
         }
-
-        sb.append("\n└────────────────────────────────────────────────┘")
         
-        Napier.d(sb.toString())
+        if (line.length > 2) {
+            val currentText = line.toString()
+            val padding = 43 - currentText.length
+            if (padding > 0) line.append(" ".repeat(padding))
+            line.append("│")
+            Napier.d(line.toString())
+        }
+        
+        Napier.d("└──────────────────────────────────────────┘")
         return true
     }
 

@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 import java.util.*
 
 /**
@@ -69,7 +70,7 @@ actual class PrinterConnectorFactory {
         val discoveredDevices = Collections.synchronizedSet(mutableSetOf<DiscoveredPrinter>())
 
         if (config.showVirtualDevices) {
-            discoveredDevices.add(DiscoveredPrinter("[VIRTUAL] Bluetooth Android", "BLUETOOTH", "00:AA:BB:CC:DD:EE"))
+            discoveredDevices.add(DiscoveredPrinter("[VIRTUAL] Bluetooth Android", "VIRTUAL", "00:AA:BB:CC:DD:EE"))
             launch { send(discoveredDevices.toList()) }
         }
 
@@ -125,7 +126,7 @@ actual class PrinterConnectorFactory {
     private fun usbDiscovery(config: DiscoveryConfig, onLog: (String) -> Unit): Flow<List<DiscoveredPrinter>> = flow {
         val discovered = mutableListOf<DiscoveredPrinter>()
         if (config.showVirtualDevices) {
-            discovered.add(DiscoveredPrinter("[VIRTUAL] USB Android Printer", "USB", "1234:5678"))
+            discovered.add(DiscoveredPrinter("[VIRTUAL] USB Android Printer", "VIRTUAL", "1234:5678"))
         }
         
         val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
@@ -143,7 +144,7 @@ actual class PrinterConnectorFactory {
         val discovered = Collections.synchronizedSet(mutableSetOf<DiscoveredPrinter>())
         
         if (config.showVirtualDevices) {
-            discovered.add(DiscoveredPrinter("[VIRTUAL] Network Printer", "NETWORK", "192.168.1.101", 9100))
+            discovered.add(DiscoveredPrinter("[VIRTUAL] Network Printer", "VIRTUAL", "192.168.1.101", 9100))
             send(discovered.toList())
         }
 

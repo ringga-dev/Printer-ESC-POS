@@ -15,7 +15,10 @@ data class PrinterConfig(
     val leftMargin: Int = 0,
     val autoCenter: Boolean = false,
     val charsetName: String = "UTF-8",
-    val escPosCodePage: Byte = 0x00
+    val escPosCodePage: Byte = 0x00,
+    val selectedLogo: ByteArray? = null,
+    val logoWidth: Int = 0,
+    val logoHeight: Int = 0
 )
 
 /**

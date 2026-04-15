@@ -57,7 +57,7 @@ The latest version is packed with "Expert" features for industrial-grade POS imp
 
 ---
 
-## 📦 Rapid Installation (v1.0.2)
+## 📦 Rapid Installation (v1.0.3)
 
 For a highly detailed and professional integration guide, please visit our masterclass:
 
@@ -78,7 +78,7 @@ dependencyResolutionManagement {
 2. **Dependency**:
 ```kotlin
 // commonMain
-implementation("io.github.ringga-dev:kmp_printer:1.0.2")
+implementation("io.github.ringga-dev:kmp_printer:1.0.3")
 ```
 
 ---

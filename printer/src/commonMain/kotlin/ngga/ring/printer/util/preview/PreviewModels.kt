@@ -33,7 +33,8 @@ sealed class PreviewBlock {
     data class Image(
         val width: Int,
         val height: Int,
-        val alignment: TextAlignment = TextAlignment.LEFT
+        val alignment: TextAlignment = TextAlignment.LEFT,
+        val previewData: Any? = null
     ) : PreviewBlock()
     
     data class QRCode(

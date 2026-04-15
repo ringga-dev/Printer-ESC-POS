@@ -24,6 +24,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.TransformOrigin
+import ngga.ring.printer_esc_pos.util.rememberImagePicker
+import androidx.compose.ui.graphics.ImageBitmap
+import kotlinproject.composeapp.generated.resources.Res
+import kotlinproject.composeapp.generated.resources.logo_ringga_dev
+import kotlinproject.composeapp.generated.resources.logo_ringga_dev_classic
+import org.jetbrains.compose.resources.*
+import kotlinx.coroutines.launch
 
 @Composable
 fun StudioScreen(viewModel: PrinterViewModel) {
@@ -49,6 +56,88 @@ fun StudioScreen(viewModel: PrinterViewModel) {
         )
 
         Spacer(Modifier.height(32.dp))
+
+        // Branding & Logo Section
+        val logoPreview by viewModel.logoPreview.collectAsState()
+        val imagePicker = rememberImagePicker { image, preview ->
+            viewModel.setLogo(image, preview)
+        }
+        
+        Text("BRANDING", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            FilledTonalButton(
+                onClick = { imagePicker() },
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Default.AddPhotoAlternate, null)
+                Spacer(Modifier.width(8.dp))
+                Text(if (logoPreview == null) "SET LOGO" else "CHANGE LOGO")
+            }
+            
+            if (logoPreview != null) {
+                IconButton(onClick = { viewModel.clearLogo() }) {
+                    Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)
+                }
+            }
+        }
+
+        // Sample Logos Selection
+        Text("SAMPLE LOGOS", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(top = 8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            val scope = rememberCoroutineScope()
+            
+            // Simplified approach: clickable icons that load bytes on demand
+            
+            OutlinedCard(
+                onClick = { 
+                    scope.launch {
+                        val bytes = Res.readBytes("drawable/logo_ringga_dev.png")
+                        val bitmap = bytes.decodeToImageBitmap()
+                        viewModel.setLogo(bytes, bitmap)
+                    }
+                },
+                modifier = Modifier.size(60.dp),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    androidx.compose.foundation.Image(
+                        painter = painterResource(Res.drawable.logo_ringga_dev),
+                        contentDescription = "New Logo",
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
+            }
+
+            OutlinedCard(
+                onClick = { 
+                    scope.launch {
+                        val bytes = Res.readBytes("drawable/logo_ringga_dev_classic.png")
+                        val bitmap = bytes.decodeToImageBitmap()
+                        viewModel.setLogo(bytes, bitmap)
+                    }
+                },
+                modifier = Modifier.size(60.dp),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    androidx.compose.foundation.Image(
+                        painter = painterResource(Res.drawable.logo_ringga_dev_classic),
+                        contentDescription = "Classic Logo",
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
 
         // Receipt Preview Area
         Box(
@@ -262,15 +351,26 @@ private fun RenderPreviewBlock(block: PreviewBlock) {
                 },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(width = (block.width / 2.5).dp, height = (block.height / 2.5).dp)
-                        .drawBehind { drawRect(Color.LightGray.copy(alpha = 0.2f)) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.Image, null, Modifier.size(20.dp), Color.Gray)
-                        Text("${block.width}x${block.height}", fontSize = 8.sp, color = Color.Gray, fontFamily = monoFont)
+                val bitmap = block.previewData as? ImageBitmap
+                if (bitmap != null) {
+                    androidx.compose.foundation.Image(
+                        bitmap = bitmap,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .width((block.width / 2.5).dp)
+                            .height((block.height / 2.5).dp)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(width = (block.width / 2.5).dp, height = (block.height / 2.5).dp)
+                            .drawBehind { drawRect(Color.LightGray.copy(alpha = 0.2f)) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.Image, null, Modifier.size(20.dp), Color.Gray)
+                            Text("${block.width}x${block.height}", fontSize = 8.sp, color = Color.Gray, fontFamily = monoFont)
+                        }
                     }
                 }
             }

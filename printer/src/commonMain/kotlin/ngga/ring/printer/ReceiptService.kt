@@ -60,6 +60,16 @@ class ReceiptService {
     private fun getTestBuilder(config: ngga.ring.printer.model.PrinterConfig): ESCPosCommandBuilder {
         val builder = ESCPosCommandBuilder.fromPrinterConfig(config).initialize()
         
+        // Print logo if available in config
+        config.selectedLogo?.let { logo ->
+            builder.image(
+                bytes = logo,
+                width = config.logoWidth,
+                height = config.logoHeight,
+                center = true
+            ).feed(1)
+        }
+
         // Sample receipt data
         val storeName = "NGGA Store"
         val address = listOf("Jl. Example No. 123", "Jakarta, Indonesia")

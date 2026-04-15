@@ -109,7 +109,7 @@ fun ConfigScreen(
                     onClick = {
                         viewModel.updateConfig(config.copy(
                             paperWidth = width,
-                            characterPerLine = if (width == 80) 42 else 31,
+                            characterPerLine = if (width == 80) 48 else 31,
                             paperWidthDots = if (width == 80) 576 else 384
                         ))
                     },

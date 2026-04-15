@@ -57,7 +57,7 @@ Versi terbaru kini hadir dengan fitur-fitur "Expert" untuk implementasi kelas in
 
 ---
 
-## 📦 Pemasangan Cepat (v1.0.2)
+## 📦 Pemasangan Cepat (v1.0.3)
 
 Untuk integrasi yang paling detail dan profesional, silakan lihat panduan lengkap kami:
 
@@ -78,7 +78,7 @@ dependencyResolutionManagement {
 2. **Dependency**:
 ```kotlin
 // commonMain
-implementation("io.github.ringga-dev:kmp_printer:1.0.2")
+implementation("io.github.ringga-dev:kmp_printer:1.0.3")
 ```
 
 ---

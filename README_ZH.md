@@ -57,7 +57,7 @@ KmpPrinter 是一款高性能的 ESC/POS 热敏打印库，旨在轻松集成到
 
 ---
 
-## 📦 快速安装 (v1.0.2)
+## 📦 快速安装 (v1.0.3)
 
 如需查看最详尽、最专业的集成指南，请访问：
 
@@ -78,7 +78,7 @@ dependencyResolutionManagement {
 2. **依赖配置**:
 ```kotlin
 // commonMain
-implementation("io.github.ringga-dev:kmp_printer:1.0.2")
+implementation("io.github.ringga-dev:kmp_printer:1.0.3")
 ```
 
 ---

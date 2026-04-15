@@ -6,8 +6,11 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import ngga.ring.printer.KmpPrinter
 import ngga.ring.printer.util.preview.PreviewBlock
-import ngga.ring.printer.model.*
 import ngga.ring.printer.util.ConnectionState
+import ngga.ring.printer.util.platform.ESCPosImageHelper
+import ngga.ring.printer.util.escpos.TextAlignment
+import androidx.compose.ui.graphics.ImageBitmap
+import ngga.ring.printer.model.*
 
 class PrinterViewModel : ViewModel() {
     private val printer = KmpPrinter()
@@ -37,6 +40,52 @@ class PrinterViewModel : ViewModel() {
 
     private val _previewBlocks = MutableStateFlow<List<PreviewBlock>>(emptyList())
     val previewBlocks: StateFlow<List<PreviewBlock>> = _previewBlocks.asStateFlow()
+
+    // --- Logo State ---
+    private val _selectedLogoBytes = MutableStateFlow<ByteArray?>(null)
+    private val _logoWidth = MutableStateFlow(0)
+    private val _logoHeight = MutableStateFlow(0)
+    
+    private val _logoPreview = MutableStateFlow<ImageBitmap?>(null)
+    val logoPreview: StateFlow<ImageBitmap?> = _logoPreview.asStateFlow()
+
+    fun setLogo(image: Any, preview: ImageBitmap) {
+        viewModelScope.launch {
+            try {
+                // Determine paper width for scaling
+                val maxWidth = _config.value.paperWidthDots.let { if (it > 0) it else 384 }
+                val (bytes, w, h) = ESCPosImageHelper.processToRaster(image, maxWidth)
+                
+                _selectedLogoBytes.value = bytes
+                _logoWidth.value = w
+                _logoHeight.value = h
+                _logoPreview.value = preview
+                
+                // Update config so print jobs see the logo
+                _config.value = _config.value.copy(
+                    selectedLogo = bytes,
+                    logoWidth = w,
+                    logoHeight = h
+                )
+                
+                // Update preview with the new logo
+                updatePreview(_config.value)
+            } catch (e: Exception) {
+                _discoveryLog.value = "Error processing logo: ${e.message}"
+            }
+        }
+    }
+
+    fun clearLogo() {
+        _selectedLogoBytes.value = null
+        _logoPreview.value = null
+        _config.value = _config.value.copy(
+            selectedLogo = null,
+            logoWidth = 0,
+            logoHeight = 0
+        )
+        updatePreview(_config.value)
+    }
 
     fun resetPrintStatus() {
         _printStatus.value = PrintStatus.Idle
@@ -160,6 +209,18 @@ class PrinterViewModel : ViewModel() {
 
 
     private fun updatePreview(config: PrinterConfig) {
-        _previewBlocks.value = printer.receiptService.generateTestPreview(config)
+        val baseBlocks = printer.receiptService.generateTestPreview(config).toMutableList()
+        
+        // Inject logo if exists
+        _logoPreview.value?.let { bitmap ->
+            baseBlocks.add(0, PreviewBlock.Image(
+                width = _logoWidth.value,
+                height = _logoHeight.value,
+                alignment = TextAlignment.CENTER,
+                previewData = bitmap
+            ))
+        }
+        
+        _previewBlocks.value = baseBlocks
     }
 }

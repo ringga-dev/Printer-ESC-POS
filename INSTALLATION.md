@@ -50,15 +50,15 @@ Buka file `build.gradle.kts` di modul target Anda (biasanya `:composeApp` atau `
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            // Gunakan versi stabil 1.0.2 (Tanpa awalan 'v')
-            implementation("io.github.ringga-dev:kmp_printer:1.0.2")
+            // Gunakan versi stabil 1.0.3 (Tanpa awalan 'v')
+            implementation("io.github.ringga-dev:kmp_printer:1.0.3")
         }
     }
 }
 ```
 
 > [!TIP]
-> **Penting**: Selalu gunakan versi `1.0.2` di kode Gradle Anda. Huruf `v` hanya digunakan untuk label Tag di GitHub, bukan untuk ID artifact Maven.
+> **Penting**: Selalu gunakan versi `1.0.3` di kode Gradle Anda. Huruf `v` hanya digunakan untuk label Tag di GitHub, bukan untuk ID artifact Maven.
 
 ---
 

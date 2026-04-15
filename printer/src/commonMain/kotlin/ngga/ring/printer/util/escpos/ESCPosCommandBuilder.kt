@@ -204,7 +204,7 @@ class ESCPosCommandBuilder(
 
     /**
      * Prints a Barcode (GS k).
-     * 
+     *
      * @param data Barcode content string.
      * @param type Barcode system (Default 73 = CODE128).
      * @param height Barcode height in dots (Default 162).
@@ -218,54 +218,64 @@ class ESCPosCommandBuilder(
         center: Boolean = false
     ): ESCPosCommandBuilder {
         if (center) alignCenter()
-        
+
         // Set height
         writeRaw(0x1D, 0x68, height.coerceIn(1, 255))
         // Set width
         writeRaw(0x1D, 0x77, width.coerceIn(2, 6))
-        
+
         // Print barcode (System B)
+        // System B: [1D 6B m n d1...dn]
+        // m = 73 (CODE128), n = length of data
         val bytes = data.encodeToByteArray()
         writeRaw(0x1D, 0x6B, type, bytes.size)
         writeBytes(bytes)
-        
+
         if (center) alignLeft()
         return this
     }
 
     /**
-     * Prints a QR Code using the standard function sequence (GS ( k).
-     * 
+     * Prints a QR Code using the standard native sequence (GS ( k).
+     * Strictly follows the 5-step hardware sequence.
+     *
      * @param data QR code content.
      * @param size Module size 1..16 (Default 8).
      * @param center Whether to center the QR code.
      */
-    fun qrCode(data: String, size: Int = 8, center: Boolean = false): ESCPosCommandBuilder {
+    fun qrCodeNative(data: String, size: Int = 8, center: Boolean = false): ESCPosCommandBuilder {
         if (center) alignCenter()
-        
+
         val bytes = data.encodeToByteArray()
         val numBytes = bytes.size + 3
         val pL = numBytes % 256
         val pH = numBytes / 256
 
-        // 1. Set model (Model 2)
+        // 1. Tentukan Model (1D 28 6B 04 00 31 41 n1 n2)
+        // n1=50 (Model 2), n2=0
         writeRaw(0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00)
-        
-        // 2. Set module size
+
+        // 2. Tentukan Ukuran Module (1D 28 6B 03 00 31 43 n)
         writeRaw(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, size.coerceIn(1, 16))
-        
-        // 3. Set error correction (Level L = 48, M = 49, Q = 50, H = 51)
+
+        // 3. Tentukan Error Correction (1D 28 6B 03 00 31 45 n)
+        // n=48 (Level L)
         writeRaw(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 48)
 
-        // 4. Store data
+        // 4. Simpan Data ke Memory (1D 28 6B pL pH 31 50 30 d1...dk)
         writeRaw(0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30)
         writeBytes(bytes)
 
-        // 5. Print
+        // 5. Cetak QR (1D 28 6B 03 00 31 51 30)
         writeRaw(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30)
-        
+
         if (center) alignLeft()
         return this
+    }
+
+    /** Alias for qrCodeNative to maintain backward compatibility. */
+    fun qrCode(data: String, size: Int = 8, center: Boolean = false): ESCPosCommandBuilder {
+        return qrCodeNative(data, size, center)
     }
 
     /* ------------------------------------------------------------
@@ -399,6 +409,16 @@ class ESCPosCommandBuilder(
         return this
     }
 
+    /**
+     * Selects a code page for the printer (ESC t n).
+     *
+     * @param page Code page index (check your printer's manual, e.g., 0x00 for PC437, 0x10 for WPC1252).
+     */
+    fun selectCodePage(page: Byte): ESCPosCommandBuilder {
+        writeRaw(0x1B, 0x74, page.toInt())
+        return this
+    }
+
     /* ------------------------------------------------------------
      * Low-level ESC/POS byte operations
      * ------------------------------------------------------------ */
@@ -414,8 +434,10 @@ class ESCPosCommandBuilder(
     }
 
     private fun writeText(text: String) {
-        if (text.isNotEmpty())
-            writeBytes(text.encodeToByteArray())
+        if (text.isNotEmpty()) {
+            val bytes = ngga.ring.printer.util.encodeString(text, config.charset)
+            writeBytes(bytes)
+        }
     }
 
     private fun writeLF() {

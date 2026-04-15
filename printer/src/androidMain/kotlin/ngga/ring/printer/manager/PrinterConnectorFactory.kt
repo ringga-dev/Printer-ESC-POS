@@ -39,7 +39,8 @@ actual class PrinterConnectorFactory {
             "NETWORK" -> AndroidNetworkConnector()
             "BLUETOOTH" -> AndroidBluetoothConnector()
             "BLUETOOTH_LE" -> AndroidBleConnector(context)
-            "USB" -> AndroidUsbConnector(context)
+            "USB" -> AndroidUsbConnector()
+            "VIRTUAL" -> VirtualPrinterConnector()
             else -> object : PrinterConnector {
                 override suspend fun connect(config: PrinterConfig) = false
                 override suspend fun sendData(data: ByteArray) = false
@@ -138,58 +139,61 @@ actual class PrinterConnectorFactory {
         emit(discovered)
     }.flowOn(Dispatchers.IO)
 
-    private fun networkDiscovery(config: DiscoveryConfig, onLog: (String) -> Unit): Flow<List<DiscoveredPrinter>> = kotlinx.coroutines.flow.channelFlow {
-        val discovered = mutableListOf<DiscoveredPrinter>()
+    private fun networkDiscovery(config: DiscoveryConfig, onLog: (String) -> Unit): Flow<List<DiscoveredPrinter>> = callbackFlow {
+        val discovered = Collections.synchronizedSet(mutableSetOf<DiscoveredPrinter>())
+        
         if (config.showVirtualDevices) {
-            discovered.add(DiscoveredPrinter("[VIRTUAL] Network Android Printer", "NETWORK", "192.168.1.101", port = 9100))
+            discovered.add(DiscoveredPrinter("[VIRTUAL] Network Printer", "NETWORK", "192.168.1.101", 9100))
             send(discovered.toList())
         }
-        
-        try {
-            val ipAddress = getLocalIpAddress()
-            if (ipAddress != null) {
-                val parts = ipAddress.split(".")
-                if (parts.size == 4) {
-                    val baseSubnet = "${parts[0]}.${parts[1]}.${parts[2]}"
-                    
-                    for (i in 1..254) {
-                        launch {
-                            val host = "$baseSubnet.$i"
-                            if (isPortOpen(host, 9100, config.networkScanTimeoutMs)) {
-                                synchronized(discovered) {
-                                    if (discovered.none { it.address == host }) {
-                                        discovered.add(DiscoveredPrinter("Printer ($host)", "NETWORK", host, 9100))
-                                    }
-                                }
-                                send(discovered.toList())
-                            }
-                        }
+
+        val socket = java.net.DatagramSocket().apply {
+            broadcast = true
+            soTimeout = config.networkScanTimeoutMs
+        }
+
+        launch(Dispatchers.IO) {
+            try {
+                // Send UDP Broadcast to port 9100
+                // Some printers respond to simple ESC/POS Init (1B 40)
+                val probeData = byteArrayOf(0x1B, 0x40)
+                val packet = java.net.DatagramPacket(
+                    probeData, probeData.size,
+                    java.net.InetAddress.getByName("255.255.255.255"),
+                    9100
+                )
+                socket.send(packet)
+                onLog("UDP Broadcast sent to 255.255.255.255:9100")
+
+                // Listen for responses
+                val buffer = ByteArray(1024)
+                while (isActive) {
+                    val receivePacket = java.net.DatagramPacket(buffer, buffer.size)
+                    try {
+                        socket.receive(receivePacket)
+                        val address = receivePacket.address.hostAddress
+                        onLog("Found printer at: $address")
+                        
+                        discovered.add(DiscoveredPrinter(
+                            name = "Network Printer ($address)",
+                            connectionType = "NETWORK",
+                            address = address,
+                            port = 9100
+                        ))
+                        send(discovered.toList())
+                    } catch (e: java.net.SocketTimeoutException) {
+                        break // Done scanning
                     }
                 }
+            } catch (e: Exception) {
+                onLog("Network discovery error: ${e.message}")
+            } finally {
+                socket.close()
             }
-        } catch (e: Exception) {
-            onLog("Network scan error: ${e.message}")
+        }
+
+        awaitClose {
+            try { socket.close() } catch (e: Exception) {}
         }
     }.flowOn(Dispatchers.IO)
-
-    private fun getLocalIpAddress(): String? {
-        try {
-            val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            val activeNetwork = connectivityManager.activeNetwork
-            val linkProperties = connectivityManager.getLinkProperties(activeNetwork)
-            linkProperties?.linkAddresses?.forEach { linkAddress ->
-                val address = linkAddress.address
-                if (!address.isLoopbackAddress && address is java.net.Inet4Address) {
-                    return address.hostAddress
-                }
-            }
-        } catch (e: Exception) {}
-        return null
-    }
-
-    private fun isPortOpen(host: String, port: Int, timeout: Int): Boolean {
-        return try {
-            java.net.Socket().use { it.connect(java.net.InetSocketAddress(host, port), timeout); true }
-        } catch (e: Exception) { false }
-    }
 }

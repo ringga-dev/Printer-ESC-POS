@@ -213,6 +213,6 @@ actual class PrinterConnectorFactory {
             }
             delay(1000)
             close()
-        } else {
+        }
     }.flowOn(Dispatchers.Main)
 }

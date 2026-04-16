@@ -5,8 +5,12 @@ import ngga.ring.printer.model.DiscoveredPrinter
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.channels.awaitClose
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.util.Collections
 
 /**
  * JVM Implementation for Network (TCP) printers.
@@ -64,12 +68,12 @@ actual class PrinterConnectorFactory {
         type: String, 
         config: ngga.ring.printer.model.DiscoveryConfig,
         onLog: (String) -> Unit
-    ): Flow<List<DiscoveredPrinter>> = callbackFlow {
+    ): Flow<List<DiscoveredPrinter>> = callbackFlow<List<DiscoveredPrinter>> {
         val discoveredDevices = Collections.synchronizedSet(mutableSetOf<DiscoveredPrinter>())
 
         if (config.showVirtualDevices) {
             discoveredDevices.add(DiscoveredPrinter("[VIRTUAL] $type JVM Printer", type, if(type == "NETWORK") "192.168.1.103" else "COM1-VIRTUAL"))
-            send(discoveredDevices.toList())
+            trySend(discoveredDevices.toList())
         }
 
         if (type == "NETWORK") {
@@ -96,7 +100,7 @@ actual class PrinterConnectorFactory {
                             socket.receive(receivePacket)
                             val address = receivePacket.address.hostAddress
                             discoveredDevices.add(DiscoveredPrinter("Printer ($address)", "NETWORK", address, 9100))
-                            send(discoveredDevices.toList())
+                            trySend(discoveredDevices.toList())
                         } catch (e: java.net.SocketTimeoutException) {
                             break
                         }

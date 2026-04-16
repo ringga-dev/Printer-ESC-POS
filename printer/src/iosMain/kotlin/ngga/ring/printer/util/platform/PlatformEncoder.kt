@@ -2,6 +2,7 @@ package ngga.ring.printer.util.platform
 
 import platform.Foundation.*
 import kotlinx.cinterop.*
+import platform.posix.memcpy
 
 @OptIn(ExperimentalForeignApi::class)
 actual fun encodeString(text: String, charsetName: String): ByteArray {

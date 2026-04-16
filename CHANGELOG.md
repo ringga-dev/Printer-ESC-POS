@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.4] - 2026-04-16
+
+### Fixed
+- **Compilation Critical Fixes**: Resolved multiple errors in JVM, iOS, and Android modules that prevented build completion.
+- **Type Inference**: Explicitly declared types for `callbackFlow` in JVM and iOS connectors.
+- **Syntax Correction**: Fixed dangling code blocks in iOS `PrinterConnectorFactory`.
+- **Import Management**: Added missing native imports for `memcpy` (iOS) and coroutine utilities (JVM).
+- **Deprecation Clean-up**: Updated Android BLE logic to use newer `writeCharacteristic` APIs for API 33+.
+
 ## [1.0.3] - 2026-04-15
 
 ### Added

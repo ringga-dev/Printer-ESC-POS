@@ -178,7 +178,7 @@ actual class PrinterConnectorFactory {
                         discovered.add(DiscoveredPrinter(
                             name = "Network Printer ($address)",
                             connectionType = "NETWORK",
-                            address = address,
+                            address = address!!,
                             port = 9100
                         ))
                         send(discovered.toList())

@@ -1,0 +1,144 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "url": "../../printer/1.0.4/printer-1.0.4.module",
+    "group": "io.github.ringga-dev",
+    "module": "printer",
+    "version": "1.0.4",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.14.3"
+    }
+  },
+  "variants": [
+    {
+      "name": "jvmApiElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.3.20"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "printer-jvm-1.0.4.jar",
+          "url": "printer-jvm-1.0.4.jar",
+          "size": 117539,
+          "sha512": "f349a13e497e18b7c67db53d4b73494cbb7cf57db711138d6c3aca1f46bc574f56a5e45e6669a758e2c5acc3ffc73e6dc24294715a8a1db715cbb5f0af9d16c6",
+          "sha256": "06713624df8892bd197706a9faa41c7a0652ed4c8ded1eb93bea7916292d6ec7",
+          "sha1": "5339cc63d52a6e5894d600cb602997ef4d523743",
+          "md5": "870ff5ec19c29dfe3d59a8d4c7dc956f"
+        }
+      ]
+    },
+    {
+      "name": "jvmRuntimeElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.3.20"
+          }
+        },
+        {
+          "group": "com.fazecast",
+          "module": "jSerialComm",
+          "version": {
+            "requires": "2.11.0"
+          }
+        },
+        {
+          "group": "net.java.dev.jna",
+          "module": "jna",
+          "version": {
+            "requires": "5.14.0"
+          }
+        },
+        {
+          "group": "net.java.dev.jna",
+          "module": "jna-platform",
+          "version": {
+            "requires": "5.14.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-coroutines-core",
+          "version": {
+            "requires": "1.10.2"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-datetime",
+          "version": {
+            "requires": "0.7.1"
+          }
+        },
+        {
+          "group": "io.github.aakira",
+          "module": "napier",
+          "version": {
+            "requires": "2.7.1"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "printer-jvm-1.0.4.jar",
+          "url": "printer-jvm-1.0.4.jar",
+          "size": 117539,
+          "sha512": "f349a13e497e18b7c67db53d4b73494cbb7cf57db711138d6c3aca1f46bc574f56a5e45e6669a758e2c5acc3ffc73e6dc24294715a8a1db715cbb5f0af9d16c6",
+          "sha256": "06713624df8892bd197706a9faa41c7a0652ed4c8ded1eb93bea7916292d6ec7",
+          "sha1": "5339cc63d52a6e5894d600cb602997ef4d523743",
+          "md5": "870ff5ec19c29dfe3d59a8d4c7dc956f"
+        }
+      ]
+    },
+    {
+      "name": "jvmSourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "files": [
+        {
+          "name": "printer-jvm-1.0.4-sources.jar",
+          "url": "printer-jvm-1.0.4-sources.jar",
+          "size": 26756,
+          "sha512": "5f735dd281f8112c27d1a7f39ec55dc0df79b32ee6deb73631e087d1986576f16f958dbb9dfe99e890122c3fa8343f48c75fec208eb8839e7c4246ace21609e6",
+          "sha256": "722c1ac2599251ec95ba31f956574fe4c34b3dfe456c8b3fa270dfaf0b53a6d1",
+          "sha1": "5320c40f529d25d5b96e24601562c1c93706f1f1",
+          "md5": "8ba6c3278ed37af6d80f07fc87805766"
+        }
+      ]
+    }
+  ]
+}

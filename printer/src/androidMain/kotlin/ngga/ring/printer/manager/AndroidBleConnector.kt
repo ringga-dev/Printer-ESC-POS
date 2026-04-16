@@ -3,6 +3,7 @@ package ngga.ring.printer.manager
 import android.annotation.SuppressLint
 import android.bluetooth.*
 import android.content.Context
+import android.os.Build
 import kotlinx.coroutines.*
 import ngga.ring.printer.model.PrinterConfig
 import java.util.*

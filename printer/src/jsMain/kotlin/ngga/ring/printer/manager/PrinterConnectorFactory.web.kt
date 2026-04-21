@@ -2,6 +2,8 @@ package ngga.ring.printer.manager
 
 import ngga.ring.printer.model.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 class WebBluetoothConnector : BasePrinterConnector() {
     private var device: dynamic = null

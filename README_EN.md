@@ -1,4 +1,4 @@
-# 🖨️ KmpPrinter
+# 🖨️ KmpPrinter (V2.1 Enterprise Hardened)
 **The Ultimate Kotlin Multiplatform Thermal Printing Suite for Professionals.**
 
 **Languages:** [Bahasa Indonesia](./README.md) | **English** | [简体中文](./README_ZH.md)
@@ -10,72 +10,41 @@
 
 ---
 
-KmpPrinter is a high-performance ESC/POS thermal printing library designed for seamless integration across **Android, iOS, and JVM (Desktop)**. Powered by a unified **Connector Pattern** architecture, you can command various thermal printer brands (Bluetooth, USB, Network) using a single, standardized codebase.
+KmpPrinter is a high-performance, industrial-grade ESC/POS thermal printing library designed for seamless integration across **Android, iOS, JVM (Desktop), and Web (WASM/JS)**. 
 
 > [!IMPORTANT]
-> **Production Ready**: This library is fortified with an **Auto-Release CI/CD** pipeline. Every version update is guaranteed stable, with binaries (`.aar`, `.jar`, `.xcframework`) always available on the releases page.
+> **Enterprise Edition (V2.1)**: This version is specifically hardened for high-traffic POS systems. It includes **Mutex-based Concurrency Protection** and **Chunked Flow Control** to prevent hardware buffer overflows on low-end thermal printers.
 
 ---
 
-## 📋 Requirements & Limitations
+## 📋 Platform Connectivity Support
 
-### Minimum Specifications
-To ensure optimal performance, verify that your project meets the following requirements:
-- **Kotlin**: v2.3.20 or higher.
-- **Android**: API Level 24+ (Android 7.0 Nougat).
-- **iOS**: iOS 13.0+ (Architecture arm64).
-- **JVM/Desktop**: Java 11 or higher.
-- **Gradle**: v8.0 or higher.
-
-### Known Limitations
-- **Protocol**: Exclusively supports standard **ESC/POS** commands.
-- **iOS Connectivity**: Only Bluetooth (BLE/Classic depending on hardware) is supported. Direct USB connection on iOS is not supported due to operating system restrictions.
-- **Image Printing**: Uses **Raster Bit Image** mode (Most compatible mode, though data size can be large for high-resolution images).
-- **Encoding**: Defaults to UTF-8. Special characters outside standard ASCII depend on the Code Page supported by your printer's firmware.
+| Platform | Bluetooth | BLE | USB (OTG) | Network (TCP) |
+| :--- | :---: | :---: | :---: | :---: |
+| **Android** | ✅ | ✅ | ✅ | ✅ |
+| **iOS** | ❌ | ✅ | ❌ | ✅ |
+| **JVM/Desktop**| ❌ | ❌ | ✅ | ✅ |
+| **Web (WASM)** | ✅ | ✅ | ✅ | ✅ |
 
 ---
 
-## 🚀 Premium Features (Why KmpPrinter?)
+## 💎 Premium Industry Features
 
-| Feature | Description | Status |
-| :--- | :--- | :---: |
-| **KMP Unified** | One codebase for Android, iOS, and Desktop. | ✅ |
-| **Native Barcode/QR** | High-res QR & Barcode via hardware (v2.0). | ✅ |
-| **USB OTG** | USB Cable support for Android tablets (v2.0). | ✅ |
-| **Visual Preview** | Dynamic UI receipt preview in-app (v2.0). | ✅ |
-| **Auto-Discovery** | Reactive network/IP printer scanning. | ✅ |
-| **Floyd-Dithering** | Smooth gradient image printing. | ✅ |
+- **🛡️ Hardened Stability (V2.1)**: Built-in `Mutex` locking prevents data corruption during concurrent print jobs. Automatic `Chunked Sending` (512 bytes with 20ms delay) ensures reliability on budget bluetooth printers.
+- **🚀 Ultra-Fast Image Engine**: Optimized dithering algorithms (**Floyd-Steinberg & Atkinson**) using integer fixed-point arithmetic for minimal RAM usage and maximum speed.
+- **🖼️ PDF & Vector Support**: Built-in utility to render PDF or SVG directly to thermal-optimized raster data.
+- **🌐 Web Support**: Full support for WebBluetooth and WebUSB in KMP WASM/JS targets.
+- **🎨 Visual Preview**: Real-time receipt preview blocks to show exactly what will be printed.
 
----
-
-## 💎 KmpPrinter V2.0 (New!)
-The latest version is packed with "Expert" features for industrial-grade POS implementations.
-
-👉 **[BROWSE V2.0 FEATURE DOCS](./DOCS_V2_EN.md)**
+👉 **[BROWSE FULL FEATURE DOCS](./DOCS_V2_EN.md)**
 
 ---
 
----
+## 📦 Installation (v1.0.3)
 
-## 📦 Rapid Installation (v1.0.3)
-
-For a highly detailed and professional integration guide, please visit our masterclass:
-
-👉 **[INSTALLATION GUIDE & KMP MASTERCLASS](./INSTALLATION_EN.md)**
+👉 **[DETAILED INSTALLATION GUIDE](./INSTALLATION_EN.md)**
 
 ### Quick Snippet (Gradle KMP)
-1. **Repository Settings**:
-```kotlin
-// settings.gradle.kts
-dependencyResolutionManagement {
-    repositories {
-        mavenCentral()
-        maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }
-    }
-}
-```
-
-2. **Dependency**:
 ```kotlin
 // commonMain
 implementation("io.github.ringga-dev:kmp_printer:1.0.3")
@@ -83,30 +52,27 @@ implementation("io.github.ringga-dev:kmp_printer:1.0.3")
 
 ---
 
-## 🛠️ Quick Usage Snippet
+## 🛠️ Performance-First Usage
+
+Using the new **Printer DSL** for clean and maintainable code:
 
 ```kotlin
 val printer = KmpPrinter()
 val config = PrinterConfig(name = "MTP-II", connectionType = "BLUETOOTH", address = "00:11...")
 
-val commands = printer.newCommandBuilder(config)
-    .initialize()
-    .alignCenter()
-    .setBold(true)
-    .line("KMP PRINTER STORE")
-    .setBold(false)
-    .divider()
-    .tableRow(listOf("Iced Coffee", "2x", "$ 4.00"), listOf(2, 1, 1))
-    .divider()
-    .alignRight()
-    .line("TOTAL: $ 4.00")
-    .feed(3)
-    .cutPaper()
-    .build()
-
-// Print with Flow-based status tracking
-printer.printRaw(config, commands).collect { status ->
-    if (status is PrintStatus.Success) println("Successfully printed!")
+// Multi-threaded safe printing with build-in flow control
+printer.print(config) {
+    initialize()
+    alignCenter()
+    imageAdvanced(logoBytes, width, height, dithering = "ATKINSON")
+    setBold(true)
+    line("ENTERPRISE POS SYSTEM")
+    setBold(false)
+    divider()
+    tableRow(listOf("Item A", "1x", "$ 10.00"), listOf(2, 1, 1))
+    qrCodeNative("https://github.com/ringga-dev", size = 8, center = true)
+    feed(3)
+    cut()
 }
 ```
 
@@ -114,22 +80,10 @@ printer.printRaw(config, commands).collect { status ->
 
 ## 🔒 Permissions Policy
 
-### Android
-```xml
-<uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-```
-
-### iOS
-Add `NSBluetoothAlwaysUsageDescription` to your `Info.plist`.
+- **Android**: Requires `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, and `ACCESS_FINE_LOCATION` (for legacy scan).
+- **iOS**: Add `NSBluetoothAlwaysUsageDescription` to your `Info.plist`.
+- **Web**: Requires user interaction (e.g., button click) to trigger the browser's device picker.
 
 ---
 
-## 📖 Deep Dive
-*   [Architecture & KMP Design Guide](./KMP_GUIDE.md)
-*   [Code Samples & Receipt Templates](./DOCS_AND_SAMPLE.md)
-*   [Contributing & License](./CONTRIBUTING.md)
-
----
 Developed with ❤️ by **Ringga**

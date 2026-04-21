@@ -45,6 +45,7 @@ actual class PrinterConnectorFactory {
             else -> object : PrinterConnector {
                 override suspend fun connect(config: PrinterConfig) = false
                 override suspend fun sendData(data: ByteArray) = false
+                override suspend fun readData(count: Int, timeout: Long) = null
                 override suspend fun disconnect() {}
                 override fun isConnected() = false
             }

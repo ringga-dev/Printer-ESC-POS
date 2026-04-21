@@ -4,14 +4,18 @@ import ngga.ring.printer.model.PrinterConfig
 import ngga.ring.printer.model.DiscoveredPrinter
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable.isActive
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.util.Collections
 
 /**
  * JVM Implementation for Network (TCP) printers.
  */
-class JvmNetworkConnector : PrinterConnector {
+class JvmNetworkConnector : BasePrinterConnector() {
     private var socket: Socket? = null
 
     override suspend fun connect(config: PrinterConfig): Boolean = withContext(Dispatchers.IO) {
@@ -24,13 +28,31 @@ class JvmNetworkConnector : PrinterConnector {
         }
     }
 
-    override suspend fun sendData(data: ByteArray): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun sendRawData(data: ByteArray): Boolean = withContext(Dispatchers.IO) {
         try {
             socket?.outputStream?.write(data)
             socket?.outputStream?.flush()
             true
         } catch (e: Exception) {
             false
+        }
+    }
+
+    override suspend fun readData(count: Int, timeout: Long): ByteArray? = withContext(Dispatchers.IO) {
+        try {
+            val input = socket?.inputStream ?: return@withContext null
+            
+            val start = System.currentTimeMillis()
+            while (input.available() <= 0) {
+                if (System.currentTimeMillis() - start > timeout) return@withContext null
+                kotlinx.coroutines.delay(10)
+            }
+            
+            val buffer = ByteArray(count.coerceAtMost(input.available()))
+            val read = input.read(buffer)
+            if (read > 0) buffer.copyOf(read) else null
+        } catch (e: Exception) {
+            null
         }
     }
 
@@ -54,6 +76,7 @@ actual class PrinterConnectorFactory {
             else -> object : PrinterConnector {
                 override suspend fun connect(config: PrinterConfig) = false
                 override suspend fun sendData(data: ByteArray) = false
+                override suspend fun readData(count: Int, timeout: Long) = null
                 override suspend fun disconnect() {}
                 override fun isConnected() = false
             }

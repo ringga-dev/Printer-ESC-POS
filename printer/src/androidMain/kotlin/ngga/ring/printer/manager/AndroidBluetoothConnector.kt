@@ -14,7 +14,7 @@ import java.util.*
  * Android Implementation for Bluetooth Classic (SPP).
  */
 @SuppressLint("MissingPermission")
-class AndroidBluetoothConnector : PrinterConnector {
+class AndroidBluetoothConnector : BasePrinterConnector() {
     private var socket: BluetoothSocket? = null
     private val SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
 
@@ -59,13 +59,32 @@ class AndroidBluetoothConnector : PrinterConnector {
         }
     }
 
-    override suspend fun sendData(data: ByteArray): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun sendRawData(data: ByteArray): Boolean = withContext(Dispatchers.IO) {
         try {
             socket?.outputStream?.write(data)
             socket?.outputStream?.flush()
             true
         } catch (e: Exception) {
             false
+        }
+    }
+
+    override suspend fun readData(count: Int, timeout: Long): ByteArray? = withContext(Dispatchers.IO) {
+        try {
+            val input = socket?.inputStream ?: return@withContext null
+            
+            // Wait for data with timeout
+            val start = System.currentTimeMillis()
+            while (input.available() <= 0) {
+                if (System.currentTimeMillis() - start > timeout) return@withContext null
+                kotlinx.coroutines.delay(10)
+            }
+            
+            val buffer = ByteArray(count.coerceAtMost(input.available()))
+            val read = input.read(buffer)
+            if (read > 0) buffer.copyOf(read) else null
+        } catch (e: Exception) {
+            null
         }
     }
 

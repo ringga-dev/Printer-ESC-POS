@@ -12,7 +12,7 @@ import kotlin.coroutines.resume
  * Android Implementation for Bluetooth Low Energy (BLE).
  */
 @SuppressLint("MissingPermission")
-class AndroidBleConnector(private val context: Context) : PrinterConnector {
+class AndroidBleConnector(private val context: Context) : BasePrinterConnector() {
     private var bluetoothGatt: BluetoothGatt? = null
     private var writeCharacteristic: BluetoothGattCharacteristic? = null
     
@@ -68,7 +68,7 @@ class AndroidBleConnector(private val context: Context) : PrinterConnector {
         success
     }
 
-    override suspend fun sendData(data: ByteArray): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun sendRawData(data: ByteArray): Boolean = withContext(Dispatchers.IO) {
         val gatt = bluetoothGatt ?: return@withContext false
         val char = writeCharacteristic ?: return@withContext false
         
@@ -86,6 +86,8 @@ class AndroidBleConnector(private val context: Context) : PrinterConnector {
         
         true
     }
+
+    override suspend fun readData(count: Int, timeout: Long): ByteArray? = null
 
     override suspend fun disconnect() = withContext(Dispatchers.IO) {
         bluetoothGatt?.disconnect()

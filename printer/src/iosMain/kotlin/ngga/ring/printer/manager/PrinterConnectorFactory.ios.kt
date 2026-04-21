@@ -16,7 +16,7 @@ import kotlin.coroutines.resume
  * Re-designed with a Delegate Pattern to avoid "Mixing Kotlin and Objective-C supertypes" errors.
  */
 @OptIn(ExperimentalForeignApi::class)
-class IosBluetoothConnector : PrinterConnector {
+class IosBluetoothConnector : BasePrinterConnector() {
     private var centralManager: CBCentralManager? = null
     private var connectedPeripheral: CBPeripheral? = null
     private var writeCharacteristic: CBCharacteristic? = null
@@ -62,7 +62,7 @@ class IosBluetoothConnector : PrinterConnector {
         }
     }
 
-    override suspend fun sendData(data: ByteArray): Boolean = withContext(Dispatchers.Default) {
+    override suspend fun sendRawData(data: ByteArray): Boolean = withContext(Dispatchers.Default) {
         val char = writeCharacteristic ?: return@withContext false
         val peripheral = connectedPeripheral ?: return@withContext false
         
@@ -73,6 +73,8 @@ class IosBluetoothConnector : PrinterConnector {
         peripheral.writeValue(nsData, forCharacteristic = char, type = CBCharacteristicWriteWithoutResponse)
         true
     }
+
+    override suspend fun readData(count: Int, timeout: Long): ByteArray? = null
 
     override suspend fun disconnect() {
         connectedPeripheral?.let { centralManager?.cancelPeripheralConnection(it) }
@@ -136,9 +138,10 @@ class IosBluetoothConnector : PrinterConnector {
     }
 }
 
-class IosNetworkConnector : PrinterConnector {
+class IosNetworkConnector : BasePrinterConnector() {
     override suspend fun connect(config: PrinterConfig): Boolean = false
-    override suspend fun sendData(data: ByteArray): Boolean = false
+    override suspend fun sendRawData(data: ByteArray): Boolean = false
+    override suspend fun readData(count: Int, timeout: Long): ByteArray? = null
     override suspend fun disconnect() {}
     override fun isConnected(): Boolean = false
 }
@@ -154,6 +157,7 @@ actual class PrinterConnectorFactory {
             else -> object : PrinterConnector {
                 override suspend fun connect(config: PrinterConfig) = false
                 override suspend fun sendData(data: ByteArray) = false
+                override suspend fun readData(count: Int, timeout: Long) = null
                 override suspend fun disconnect() {}
                 override fun isConnected() = false
             }

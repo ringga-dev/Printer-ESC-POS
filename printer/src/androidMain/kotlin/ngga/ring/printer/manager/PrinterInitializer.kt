@@ -13,6 +13,11 @@ object PrinterInitializer {
     private var context: Context? = null
     private var activityRef: WeakReference<ComponentActivity>? = null
 
+    fun initialize(context: Context) {
+        val app = context.applicationContext as? Application ?: return
+        initialize(app)
+    }
+
     fun initialize(application: Application) {
         this.context = application.applicationContext
 

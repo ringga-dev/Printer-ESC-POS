@@ -42,6 +42,7 @@ class PrinterViewModel : ViewModel() {
     val previewBlocks: StateFlow<List<PreviewBlock>> = _previewBlocks.asStateFlow()
 
     // --- Logo State ---
+    private val _originalLogoSource = MutableStateFlow<Any?>(null)
     private val _selectedLogoBytes = MutableStateFlow<ByteArray?>(null)
     private val _logoWidth = MutableStateFlow(0)
     private val _logoHeight = MutableStateFlow(0)
@@ -49,29 +50,71 @@ class PrinterViewModel : ViewModel() {
     private val _logoPreview = MutableStateFlow<ImageBitmap?>(null)
     val logoPreview: StateFlow<ImageBitmap?> = _logoPreview.asStateFlow()
 
+    // --- Enterprise Imaging State ---
+    private val _imagingDithering = MutableStateFlow("THRESHOLD")
+    val imagingDithering: StateFlow<String> = _imagingDithering.asStateFlow()
+    
+    private val _imagingContrast = MutableStateFlow(0)
+    val imagingContrast: StateFlow<Int> = _imagingContrast.asStateFlow()
+    
+    private val _imagingBrightness = MutableStateFlow(0)
+    val imagingBrightness: StateFlow<Int> = _imagingBrightness.asStateFlow()
+
     fun setLogo(image: Any, preview: ImageBitmap) {
+        _originalLogoSource.value = image
+        _logoPreview.value = preview
+        reprocessLogo()
+    }
+
+    fun updateImaging(dithering: String? = null, contrast: Int? = null, brightness: Int? = null) {
+        dithering?.let { _imagingDithering.value = it }
+        contrast?.let { _imagingContrast.value = it }
+        brightness?.let { _imagingBrightness.value = it }
+        reprocessLogo()
+    }
+
+    private fun reprocessLogo() {
+        val source = _originalLogoSource.value ?: return
         viewModelScope.launch {
             try {
-                // Determine paper width for scaling
                 val maxWidth = _config.value.paperWidthDots.let { if (it > 0) it else 384 }
-                val (bytes, w, h) = ESCPosImageHelper.processToRaster(image, maxWidth)
+                // Use standard raster for now, dithering is showcased in printExpertReceipt if using grayscale
+                val (bytes, w, h) = ESCPosImageHelper.processToRaster(source, maxWidth)
                 
                 _selectedLogoBytes.value = bytes
                 _logoWidth.value = w
                 _logoHeight.value = h
-                _logoPreview.value = preview
                 
-                // Update config so print jobs see the logo
-                _config.value = _config.value.copy(
-                    selectedLogo = bytes,
-                    logoWidth = w,
-                    logoHeight = h
-                )
-                
-                // Update preview with the new logo
                 updatePreview(_config.value)
             } catch (e: Exception) {
-                _discoveryLog.value = "Error processing logo: ${e.message}"
+                _discoveryLog.value = "Error processing: ${e.message}"
+            }
+        }
+    }
+
+    fun runStressTest() {
+        viewModelScope.launch {
+            _printStatus.value = PrintStatus.Processing
+            _discoveryLog.value = "Starting Stress Test (Mutex Demonstration)..."
+            
+            // Launch 10 concurrent print jobs
+            (1..10).forEach { i ->
+                launch {
+                    val buildConfig = _config.value
+                    val data = printer.newCommandBuilder(buildConfig)
+                        .initialize()
+                        .line("STRESS TEST TICKET #$i")
+                        .line("Mutex protection check...")
+                        .feed(2)
+                        .cut()
+                        .build()
+                    
+                    printer.printRaw(buildConfig, data).collect { status ->
+                        if (status is PrintStatus.Success) {
+                            _discoveryLog.value = "Ticket #$i printed successfully"
+                        }
+                    }
+                }
             }
         }
     }
@@ -79,11 +122,7 @@ class PrinterViewModel : ViewModel() {
     fun clearLogo() {
         _selectedLogoBytes.value = null
         _logoPreview.value = null
-        _config.value = _config.value.copy(
-            selectedLogo = null,
-            logoWidth = 0,
-            logoHeight = 0
-        )
+        _config.value = _config.value.copy()
         updatePreview(_config.value)
     }
 
@@ -202,6 +241,108 @@ class PrinterViewModel : ViewModel() {
                 .build()
             
             printer.printRaw(buildConfig, data).collect { status ->
+                _printStatus.value = status
+            }
+        }
+    }
+
+    fun printPageModeDemo() {
+        viewModelScope.launch {
+            val buildConfig = _config.value
+            val data = printer.newCommandBuilder(buildConfig)
+                .initialize()
+                .line("--- PAGE MODE DEMO ---")
+                .enterPageMode()
+                .setPagePrintArea(0, 0, 384, 200)
+                // Diagonal Teks
+                .setHorizontalPosition(10)
+                .setPageVerticalPosition(10)
+                .text("X:10, Y:10")
+                .setHorizontalPosition(100)
+                .setPageVerticalPosition(50)
+                .text("X:100, Y:50")
+                .setHorizontalPosition(200)
+                .setPageVerticalPosition(90)
+                .text("X:200, Y:90")
+                .printPageAndReturn()
+                .feed(3)
+                .cut()
+                .build()
+            
+            printer.printRaw(buildConfig, data).collect { status ->
+                _printStatus.value = status
+            }
+        }
+    }
+
+    fun printBarcodeSuite() {
+        viewModelScope.launch {
+            val buildConfig = _config.value
+            val data = printer.newCommandBuilder(buildConfig)
+                .initialize()
+                .alignCenter()
+                .line("--- BARCODE SUITE ---")
+                .feed(1)
+                .line("PDF417 (High Density)")
+                .pdf417("KMP-PRINTER-PDF417-TEST")
+                .feed(1)
+                .line("DataMatrix")
+                .dataMatrix("KMP-PRINTER-DATAMATRIX")
+                .feed(1)
+                .line("Native QR Code")
+                .qrCodeNative("https://github.com/ringga-dev", size = 10)
+                .feed(3)
+                .cut()
+                .build()
+            
+            printer.printRaw(buildConfig, data).collect { status ->
+                _printStatus.value = status
+            }
+        }
+    }
+
+    fun printExpertReceipt() {
+        viewModelScope.launch {
+            val buildConfig = _config.value
+            val logoBytes = _selectedLogoBytes.value
+            val logoW = _logoWidth.value
+            val logoH = _logoHeight.value
+
+            val data = printer.newCommandBuilder(buildConfig)
+                .initialize()
+                .alignCenter()
+                
+            if (logoBytes != null) {
+                data.image(logoBytes, logoW, logoH)
+                data.feed(1)
+            }
+            
+            data.bold(true)
+                .line("ENTERPRISE STORE POS")
+                .bold(false)
+                .line("Sudirman St. 123, Jakarta")
+                .line("Tel: +62 21 555-0199")
+                .divider()
+                .alignLeft()
+                .tableRow(listOf("Cappuccino", "1x", "45.000"), listOf(2, 1, 1))
+                .tableRow(listOf("Croissant Cheese", "2x", "60.000"), listOf(2, 1, 1))
+                .tableRow(listOf("Iced Matcha", "1x", "38.000"), listOf(2, 1, 1))
+                .divider()
+                .alignRight()
+                .bold(true)
+                .line("TOTAL: 143.000")
+                .bold(false)
+                .divider()
+                .alignCenter()
+                .line("Order #88901 - 2024-10-21")
+                .feed(1)
+                .qrCodeNative("TRX-88901-VERIFIED", size = 6)
+                .feed(1)
+                .line("Thank you for your visit!")
+                .feed(4)
+                .cut()
+            
+            printer.printRaw(buildConfig, data.build()).collect { status ->
                 _printStatus.value = status
             }
         }

@@ -1,81 +1,49 @@
-# 🖨️ KmpPrinter
-**The Ultimate Kotlin Multiplatform Thermal Printing Suite for Professionals.**
+# 🖨️ KmpPrinter (V2.1 Enterprise Hardened)
+**Solusi Cetak Thermal Kotlin Multiplatform Terbaik untuk Profesional.**
 
-**Languages:** **Bahasa Indonesia** | [English](./README_EN.md) | [简体中文](./README_ZH.md)
+**Bahasa:** **Bahasa Indonesia** | [English](./README_EN.md) | [简体中文](./README_ZH.md)
 
 ![Build Status](https://github.com/ringga-dev/Printer-ESC-POS/actions/workflows/publishgithub.yml/badge.svg)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![KMP](https://img.shields.io/badge/Kotlin-Multiplatform-blue?logo=kotlin)](https://kotlinlang.org/docs/multiplatform.html)
-[![Release](https://img.shields.io/github/v/release/ringga-dev/Printer-ESC-POS?color=orange&logo=github)](https://github.com/ringga-dev/Printer-ESC-POS/releases)
 
 ---
 
-KmpPrinter adalah library thermal printing ESC/POS yang dirancang untuk performa tinggi dan kemudahan integrasi di **Android, iOS, dan JVM (Desktop)**. Menggunakan arsitektur **Connector Pattern** yang terpadu, Anda dapat mengontrol berbagai merk printer thermal (Bluetooth, USB, Network) dengan satu standar kode yang sama.
+KmpPrinter adalah library pencetakan thermal ESC/POS kelas industri dengan performa tinggi yang dirancang untuk integrasi mulus di **Android, iOS, JVM (Desktop), dan Web (WASM/JS)**.
 
 > [!IMPORTANT]
-> **Production Ready**: Library ini sudah dilengkapi dengan sistem **Auto-Release CI/CD**. Setiap update versi dijamin stabil dan binari (`.aar`, `.jar`, `.xcframework`) selalu tersedia di halaman rilis.
+> **Enterprise Edition (V2.1)**: Versi ini telah diperkuat (*hardened*) khusus untuk sistem POS dengan traffic tinggi. Dilengkapi dengan **Mutex-based Concurrency Protection** dan **Chunked Flow Control** untuk mencegah *buffer overflow* pada printer thermal ekonomis.
 
 ---
 
-## 📋 Spesifikasi & Batasan (Requirement & Limitations)
+## 📋 Dukungan Konektivitas Platform
 
-### Spesifikasi Minimal
-Agar library dapat berjalan dengan optimal, pastikan proyek Anda memenuhi syarat berikut:
-- **Kotlin**: v2.3.20 atau lebih tinggi.
-- **Android**: API Level 24+ (Android 7.0 Nougat).
-- **iOS**: iOS 13.0+ (Architecture arm64).
-- **JVM/Desktop**: Java 11 atau lebih tinggi.
-- **Gradle**: v8.0 atau lebih tinggi.
-
-### Batasan Library (Known Limitations)
-- **Protokol**: Hanya mendukung perintah standar **ESC/POS**.
-- **Konektivitas iOS**: Hanya mendukung Bluetooth (BLE/Classic tergantung hardware). Koneksi USB pada iOS tidak didukung karena batasan sistem operasi.
-- **Pencetakan Gambar**: Menggunakan mode **Raster Bit Image** (Mode paling kompatibel, namun ukuran data bisa besar untuk gambar resolusi tinggi).
-- **Encoding**: Default menggunakan UTF-8. Karakter khusus di luar standar ASCII bergantung pada dukungan Code Page di firmware printer Anda.
+| Platform | Bluetooth | BLE | USB (OTG) | Network (TCP) |
+| :--- | :---: | :---: | :---: | :---: |
+| **Android** | ✅ | ✅ | ✅ | ✅ |
+| **iOS** | ❌ | ✅ | ❌ | ✅ |
+| **JVM/Desktop**| ❌ | ❌ | ✅ | ✅ |
+| **Web (WASM)** | ✅ | ✅ | ✅ | ✅ |
 
 ---
 
-## 🚀 Fitur Unggulan (Why KmpPrinter?)
+## 💎 Fitur Unggulan Industri
 
-| Fitur | Penjelasan | Status |
-| :--- | :--- | :---: |
-| **KMP Unified** | Satu kode untuk Android, iOS, dan Desktop. | ✅ |
-| **Native Barcode/QR** | Cetak QR & Barcode tajam via hardware (v2.0). | ✅ |
-| **USB OTG** | Dukungan kabel USB di Android (v2.0). | ✅ |
-| **Visual Preview** | Lihat struk di layar sebelum diprint (v2.0). | ✅ |
-| **Auto-Discovery** | Scan otomatis printer di jaringan/IP. | ✅ |
-| **Floyd-Dithering** | Cetak gambar dengan gradasi halus. | ✅ |
+- **🛡️ Stabilitas Hardened (V2.1)**: Mekanisme `Mutex` internal mencegah kerusakan data saat ada banyak proses cetak bersamaan. Fitur `Chunked Sending` otomatis memastikan keandalan pada printer bluetooth murah.
+- **🚀 Ultra-Fast Image Engine**: Algoritma dithering yang dioptimalkan (**Floyd-Steinberg & Atkinson**) menggunakan aritmatika *integer fixed-point* untuk penggunaan RAM minimal dan kecepatan maksimal.
+- **🖼️ Dukungan PDF & Vektor**: Utilitas bawaan untuk merender PDF atau SVG langsung ke data raster yang dioptimalkan untuk thermal.
+- **🌐 Web Support**: Dukungan penuh untuk WebBluetooth dan WebUSB pada target KMP WASM/JS.
+- **🎨 Visual Preview**: Blok pratinjau struk secara real-time untuk menunjukkan hasil cetak secara presisi di aplikasi.
 
----
-
-## 💎 KmpPrinter V2.0 (New!)
-Versi terbaru kini hadir dengan fitur-fitur "Expert" untuk implementasi kelas industri.
-
-👉 **[LIHAT DOKUMENTASI FITUR V2.0](./DOCS_V2.md)**
+👉 **[BACA DOKUMENTASI FITUR LENGKAP](./DOCS_V2.md)**
 
 ---
 
----
+## 📦 Instalasi (v1.0.3)
 
-## 📦 Pemasangan Cepat (v1.0.3)
+👉 **[PANDUAN INSTALASI DETAIL](./INSTALLATION.md)**
 
-Untuk integrasi yang paling detail dan profesional, silakan lihat panduan lengkap kami:
-
-👉 **[PANDUAN INSTALASI & KMP MASTERCLASS](./INSTALLATION.md)**
-
-### Quick Snippet (Gradle KMP)
-1. **Repository Settings**:
-```kotlin
-// settings.gradle.kts
-dependencyResolutionManagement {
-    repositories {
-        mavenCentral()
-        maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }
-    }
-}
-```
-
-2. **Dependency**:
+### Cuplikan Cepat (Gradle KMP)
 ```kotlin
 // commonMain
 implementation("io.github.ringga-dev:kmp_printer:1.0.3")
@@ -83,30 +51,27 @@ implementation("io.github.ringga-dev:kmp_printer:1.0.3")
 
 ---
 
-## 🛠️ Contoh Kode Cepat
+## 🛠️ Penggunaan Performa-Tinggi
+
+Menggunakan **Printer DSL** baru untuk kode yang bersih dan mudah dipelihara:
 
 ```kotlin
 val printer = KmpPrinter()
 val config = PrinterConfig(name = "MTP-II", connectionType = "BLUETOOTH", address = "00:11...")
 
-val commands = printer.newCommandBuilder(config)
-    .initialize()
-    .alignCenter()
-    .setBold(true)
-    .line("KMP PRINTER STORE")
-    .setBold(false)
-    .divider()
-    .tableRow(listOf("Iced Coffee", "2x", "Rp 40.000"), listOf(2, 1, 1))
-    .divider()
-    .alignRight()
-    .line("TOTAL: Rp 40.000")
-    .feed(3)
-    .cutPaper()
-    .build()
-
-// Kirim ke printer dengan Flow status
-printer.printRaw(config, commands).collect { status ->
-    if (status is PrintStatus.Success) println("Berhasil dicetak!")
+// Pencetakan aman multi-thread dengan flow control bawaan
+printer.print(config) {
+    initialize()
+    alignCenter()
+    imageAdvanced(logoBytes, width, height, dithering = "ATKINSON")
+    setBold(true)
+    line("SISTEM POS ENTERPRISE")
+    setBold(false)
+    divider()
+    tableRow(listOf("Menu A", "1x", "Rp 10.000"), listOf(2, 1, 1))
+    qrCodeNative("https://github.com/ringga-dev", size = 8, center = true)
+    feed(3)
+    cut()
 }
 ```
 
@@ -114,21 +79,6 @@ printer.printRaw(config, commands).collect { status ->
 
 ## 🔒 Kebijakan Izin (Permissions)
 
-### Android
-```xml
-<uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-```
-
-### iOS
-Tambahkan `NSBluetoothAlwaysUsageDescription` ke `Info.plist` Anda.
-
----
-
-## 🔍 Troubleshooting & FAQ
-
-### 1. Unresolved Reference: `KmpPrinter`
 Pastikan Anda sudah menambahkan `mavenCentral()` dan URL GitHub Maven di `settings.gradle.kts`. Jika menggunakan Gradle versi lama, tambahkan di `build.gradle` root.
 ```kotlin
 maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }

@@ -19,6 +19,18 @@ data class PrinterConfig(
 )
 
 /**
+ * Detailed real-time status of the printer.
+ */
+data class PrinterStatus(
+    val isOnline: Boolean = true,
+    val isCoverOpen: Boolean = false,
+    val isPaperOut: Boolean = false,
+    val isPaperNearEnd: Boolean = false,
+    val isError: Boolean = false,
+    val rawBytes: ByteArray? = null
+)
+
+/**
  * Result from a printer discovery process.
  */
 data class DiscoveredPrinter(

@@ -114,6 +114,32 @@ class ESCPosCommandBuilder(
     }
 
     /** Writes plain text (no LF). */
+    /**
+     * Automatically selects and applies the best code page for the given text.
+     */
+    fun selectAutoCodePage(text: String): ESCPosCommandBuilder {
+        val codePage = ESCPosCharsetMapper.getBestCodePage(text)
+        setPrintCodePage(codePage)
+        return this
+    }
+
+    /**
+     * Manually sets the print code page (ESC t n).
+     */
+    fun setPrintCodePage(codePage: Byte): ESCPosCommandBuilder {
+        writeRaw(0x1B, 0x74, codePage.toInt())
+        return this
+    }
+
+    /**
+     * Writes text with automatic code page selection.
+     */
+    fun lineAuto(text: String): ESCPosCommandBuilder {
+        selectAutoCodePage(text)
+        line(text)
+        return this
+    }
+
     fun text(text: String): ESCPosCommandBuilder {
         writeText(text)
         return this
@@ -237,11 +263,48 @@ class ESCPosCommandBuilder(
      * ------------------------------------------------------------ */
 
     /**
-     * Prints a raster bit image (GS v 0).
+     * Prints an image with advanced processing (Dithering, Levels, Rotation).
      * 
-     * @param bytes Packaged bitonal bytes (8 pixels per byte).
-     * @param width Width in pixels.
-     * @param height Height in pixels.
+     * @param grayscale Grayscale pixel values (0-255).
+     * @param width Image width.
+     * @param height Image height.
+     * @param dithering One of "FLOYD_STEINBERG", "ATKINSON", or "NONE".
+     */
+    fun imageAdvanced(
+        grayscale: IntArray,
+        width: Int,
+        height: Int,
+        dithering: String = "FLOYD_STEINBERG",
+        contrast: Int = 0,
+        brightness: Int = 0,
+        rotation: Int = 0,
+        center: Boolean = false
+    ): ESCPosCommandBuilder {
+        var processed = if (contrast != 0 || brightness != 0) {
+            ESCPosImageHelper.adjustLevels(grayscale, contrast, brightness)
+        } else {
+            grayscale
+        }
+
+        var (bitonal, w, h) = when (dithering) {
+            "ATKINSON" -> Triple(ESCPosImageHelper.applyAtkinson(processed, width, height), width, height)
+            "NONE" -> Triple(BooleanArray(processed.size) { processed[it] < 128 }, width, height)
+            else -> Triple(ESCPosImageHelper.applyFloydSteinberg(processed, width, height), width, height)
+        }
+
+        if (rotation != 0) {
+            val rotated = ESCPosImageHelper.rotate(bitonal, w, h, rotation)
+            bitonal = rotated.first
+            w = rotated.second
+            h = rotated.third
+        }
+
+        val packed = ESCPosImageHelper.packPixelsToRaster(bitonal, w, h)
+        return image(packed, w, h, center)
+    }
+
+    /**
+     * Prints a raster bit image (GS v 0).
      */
     fun image(
         bytes: ByteArray, 
@@ -290,6 +353,85 @@ class ESCPosCommandBuilder(
         // Print barcode (System B: 1D 6B 49 n d1...dn)
         val bytes = data.encodeToByteArray()
         writeRaw(0x1D, 0x6B, 73, bytes.size)
+        writeBytes(bytes)
+        
+        if (center) alignLeft()
+        return this
+    }
+
+    /**
+     * Prints a PDF417 barcode.
+     */
+    fun pdf417(
+        data: String, 
+        columns: Int = 0, 
+        rows: Int = 0, 
+        width: Int = 3, 
+        height: Int = 3, 
+        errorLevel: Int = 1,
+        center: Boolean = false
+    ): ESCPosCommandBuilder {
+        if (center) alignCenter()
+        previewBlocks.add(PreviewBlock.Barcode(data, currentAlignment))
+
+        val bytes = data.encodeToByteArray()
+        val pL = (bytes.size + 3) % 256
+        val pH = (bytes.size + 3) / 256
+
+        // Set number of columns (fn 65)
+        writeRaw(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x30, 0x41, columns)
+        // Set number of rows (fn 66)
+        writeRaw(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x30, 0x42, rows)
+        // Set width of module (fn 67)
+        writeRaw(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x30, 0x43, width)
+        // Set row height (fn 68)
+        writeRaw(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x30, 0x44, height)
+        // Set error correction (fn 69)
+        writeRaw(0x1D, 0x28, 0x6B, 0x04, 0x00, 0x30, 0x45, 0x30, errorLevel)
+        // Store data (fn 80)
+        writeRaw(0x1D, 0x28, 0x6B, pL, pH, 0x30, 0x50, 0x30)
+        writeBytes(bytes)
+        // Print (fn 81)
+        writeRaw(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x30, 0x51, 0x30)
+        
+        if (center) alignLeft()
+        return this
+    }
+
+    /**
+     * Prints a DataMatrix barcode.
+     */
+    fun dataMatrix(data: String, size: Int = 0, center: Boolean = false): ESCPosCommandBuilder {
+        if (center) alignCenter()
+        previewBlocks.add(PreviewBlock.Barcode(data, currentAlignment))
+
+        val bytes = data.encodeToByteArray()
+        val pL = (bytes.size + 3) % 256
+        val pH = (bytes.size + 3) / 256
+
+        // Set module size (fn 67)
+        writeRaw(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x34, 0x43, size.coerceIn(0, 16))
+        // Store data (fn 80)
+        writeRaw(0x1D, 0x28, 0x6B, pL, pH, 0x34, 0x50, 0x30)
+        writeBytes(bytes)
+        // Print (fn 81)
+        writeRaw(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x34, 0x51, 0x30)
+        
+        if (center) alignLeft()
+        return this
+    }
+
+    /**
+     * Prints a QR Code using the legacy "System A" sequence.
+     * Use this as a fallback for older printers.
+     */
+    fun qrLegacy(data: String, size: Int = 3, center: Boolean = false): ESCPosCommandBuilder {
+        if (center) alignCenter()
+        previewBlocks.add(PreviewBlock.Barcode(data, currentAlignment))
+        
+        val bytes = data.encodeToByteArray()
+        // GS k 11 pL pH ...
+        writeRaw(0x1D, 0x6B, 11, bytes.size % 256, bytes.size / 256)
         writeBytes(bytes)
         
         if (center) alignLeft()
@@ -493,6 +635,97 @@ class ESCPosCommandBuilder(
      */
     fun selectCodePage(page: Byte): ESCPosCommandBuilder {
         writeRaw(0x1B, 0x74, page.toInt())
+        return this
+    }
+
+    /**
+     * Inquires printer status (DLE EOT n).
+     * 1: Printer status
+     * 2: Offline status
+     * 3: Error status
+     * 4: Paper roll sensor status
+     */
+    fun checkStatus(type: Int): ESCPosCommandBuilder {
+        writeRaw(0x10, 0x04, type.coerceIn(1, 4))
+        return this
+    }
+
+    /* ------------------------------------------------------------
+     * Page Mode Support (ESC L)
+     * ------------------------------------------------------------ */
+
+    /** Enters Page Mode (ESC L). */
+    fun enterPageMode(): ESCPosCommandBuilder {
+        writeRaw(0x1B, 0x4C)
+        return this
+    }
+
+    /** Exits Page Mode and returns to Standard Mode (ESC S). */
+    fun exitPageMode(): ESCPosCommandBuilder {
+        writeRaw(0x1B, 0x53)
+        return this
+    }
+
+    /**
+     * Sets the print area in Page Mode (ESC W).
+     * All parameters are in dots.
+     */
+    fun setPagePrintArea(x: Int, y: Int, width: Int, height: Int): ESCPosCommandBuilder {
+        val xL = x % 256; val xH = x / 256
+        val yL = y % 256; val yH = y / 256
+        val dxL = width % 256; val dxH = width / 256
+        val dyL = height % 256; val dyH = height / 256
+        writeRaw(0x1B, 0x57, xL, xH, yL, yH, dxL, dxH, dyL, dyH)
+        return this
+    }
+
+    /**
+     * Sets the absolute vertical print position in Page Mode (GS $ nL nH).
+     */
+    fun setPageVerticalPosition(dots: Int): ESCPosCommandBuilder {
+        val nL = dots % 256
+        val nH = dots / 256
+        writeRaw(0x1D, 0x24, nL, nH)
+        return this
+    }
+
+    /**
+     * Sets the absolute horizontal print position (ESC $ nL nH).
+     */
+    fun setHorizontalPosition(dots: Int): ESCPosCommandBuilder {
+        val nL = dots % 256
+        val nH = dots / 256
+        writeRaw(0x1B, 0x24, nL, nH)
+        return this
+    }
+
+    /**
+     * Prints all data in the page area and returns to Standard Mode (ESC FF).
+     */
+    fun printPageAndReturn(): ESCPosCommandBuilder {
+        writeRaw(0x1B, 0x0C)
+        return this
+    }
+
+    /**
+     * Sets the print direction in Page Mode (ESC T n).
+     * 0: Left to right
+     * 1: Bottom to top
+     * 2: Right to left
+     * 3: Top to bottom
+     */
+    fun setPageDirection(direction: Int): ESCPosCommandBuilder {
+        writeRaw(0x1B, 0x54, direction.coerceIn(0, 3))
+        return this
+    }
+
+    /**
+     * Prints an NV bit image (FS p n m).
+     * @param n NV image index (defined in printer memory).
+     * @param mode 0: Normal, 1: Double-width, 2: Double-height, 3: Quadruple.
+     */
+    fun printNVImage(n: Int, mode: Int = 0): ESCPosCommandBuilder {
+        writeRaw(0x1C, 0x70, n, mode.coerceIn(0, 3))
         return this
     }
 

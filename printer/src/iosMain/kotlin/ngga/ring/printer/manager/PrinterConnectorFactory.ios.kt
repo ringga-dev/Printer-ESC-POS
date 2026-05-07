@@ -21,7 +21,9 @@ class IosBluetoothConnector : BasePrinterConnector() {
     private var connectedPeripheral: CBPeripheral? = null
     private var writeCharacteristic: CBCharacteristic? = null
     private var continuation: CancellableContinuation<Boolean>? = null
-    
+    private val readBuffer = mutableListOf<Byte>()
+    private var readContinuation: CancellableContinuation<ByteArray?>? = null
+
     // Hold strong reference to avoid GC
     private var targetUUID: NSUUID? = null
     private val bleDelegate = BleDelegate()
@@ -30,29 +32,31 @@ class IosBluetoothConnector : BasePrinterConnector() {
     private val SERVICE_UUID = CBUUID.UUIDWithString("FF00")
     private val WRITE_UUID = CBUUID.UUIDWithString("FF01")
 
-    override suspend fun connect(config: PrinterConfig): Boolean = suspendCancellableCoroutine { cont ->
-        if (config.address == null) {
-            cont.resume(false)
-            return@suspendCancellableCoroutine
-        }
-        
-        this.continuation = cont
-        this.targetUUID = NSUUID(uUIDString = config.address)
-        
-        if (centralManager == null) {
-            centralManager = CBCentralManager(delegate = bleDelegate, queue = null)
-        } else {
-            if (centralManager?.state == CBManagerStatePoweredOn) {
-                initiateConnection()
+    override suspend fun connect(config: PrinterConfig): Boolean =
+        suspendCancellableCoroutine { cont ->
+            if (config.address == null) {
+                cont.resume(false)
+                return@suspendCancellableCoroutine
+            }
+
+            this.continuation = cont
+            this.targetUUID = NSUUID(uUIDString = config.address)
+
+            if (centralManager == null) {
+                centralManager = CBCentralManager(delegate = bleDelegate, queue = null)
+            } else {
+                if (centralManager?.state == CBManagerStatePoweredOn) {
+                    initiateConnection()
+                }
             }
         }
-    }
 
     private fun initiateConnection() {
         val uuid = targetUUID ?: return
-        val peripherals = centralManager?.retrievePeripheralsWithIdentifiers(listOf(uuid)) as? List<CBPeripheral>
+        val peripherals =
+            centralManager?.retrievePeripheralsWithIdentifiers(listOf(uuid)) as? List<CBPeripheral>
         val peripheral = peripherals?.firstOrNull()
-        
+
         if (peripheral != null) {
             connectedPeripheral = peripheral
             peripheral.delegate = bleDelegate
@@ -65,16 +69,30 @@ class IosBluetoothConnector : BasePrinterConnector() {
     override suspend fun sendRawData(data: ByteArray): Boolean = withContext(Dispatchers.Default) {
         val char = writeCharacteristic ?: return@withContext false
         val peripheral = connectedPeripheral ?: return@withContext false
-        
+
         val nsData = data.usePinned { pinned ->
             NSData.create(bytes = pinned.addressOf(0), length = data.size.toULong())
         }
-        
-        peripheral.writeValue(nsData, forCharacteristic = char, type = CBCharacteristicWriteWithoutResponse)
+
+        peripheral.writeValue(
+            nsData,
+            forCharacteristic = char,
+            type = CBCharacteristicWriteWithoutResponse
+        )
         true
     }
 
-    override suspend fun readData(count: Int, timeout: Long): ByteArray? = null
+    override suspend fun readData(count: Int, timeout: Long): ByteArray? = withTimeoutOrNull(timeout) {
+        if (readBuffer.size >= count) {
+            val result = readBuffer.take(count).toByteArray()
+            repeat(count) { readBuffer.removeAt(0) }
+            return@withTimeoutOrNull result
+        }
+
+        suspendCancellableCoroutine<ByteArray?> { cont ->
+            readContinuation = cont
+        }
+    }
 
     override suspend fun disconnect() {
         connectedPeripheral?.let { centralManager?.cancelPeripheralConnection(it) }
@@ -88,7 +106,8 @@ class IosBluetoothConnector : BasePrinterConnector() {
     /**
      * Internal Delegate to handle Objective-C CoreBluetooth events.
      */
-    private inner class BleDelegate : NSObject(), CBCentralManagerDelegateProtocol, CBPeripheralDelegateProtocol {
+    private inner class BleDelegate : NSObject(), CBCentralManagerDelegateProtocol,
+        CBPeripheralDelegateProtocol {
         override fun centralManagerDidUpdateState(central: CBCentralManager) {
             if (central.state == CBManagerStatePoweredOn) {
                 initiateConnection()
@@ -102,38 +121,72 @@ class IosBluetoothConnector : BasePrinterConnector() {
             didConnectPeripheral.discoverServices(listOf(SERVICE_UUID))
         }
 
-        override fun centralManager(central: CBCentralManager, didFailToConnectPeripheral: CBPeripheral, error: NSError?) {
+        override fun centralManager(
+            central: CBCentralManager,
+            didFailToConnectPeripheral: CBPeripheral,
+            error: NSError?
+        ) {
             continuation?.resume(false)
             continuation = null
         }
 
         override fun peripheral(peripheral: CBPeripheral, didDiscoverServices: NSError?) {
-            val service = (peripheral.services ?: emptyList<Any?>()).firstOrNull { 
-                (it as? CBService)?.UUID == SERVICE_UUID 
+            val service = (peripheral.services ?: emptyList<Any?>()).firstOrNull {
+                (it as? CBService)?.UUID == SERVICE_UUID
             } as? CBService
-            
+
             if (service != null) {
                 peripheral.discoverCharacteristics(listOf(WRITE_UUID), forService = service)
             } else {
-                (peripheral.services ?: emptyList<Any?>()).firstOrNull()?.let { 
+                (peripheral.services ?: emptyList<Any?>()).firstOrNull()?.let {
                     peripheral.discoverCharacteristics(null, forService = it as CBService)
                 }
             }
         }
 
-        override fun peripheral(peripheral: CBPeripheral, didDiscoverCharacteristicsForService: CBService, error: NSError?) {
-            val char = (didDiscoverCharacteristicsForService.characteristics ?: emptyList<Any?>()).firstOrNull {
+        override fun peripheral(
+            peripheral: CBPeripheral,
+            didDiscoverCharacteristicsForService: CBService,
+            error: NSError?
+        ) {
+            val char = (didDiscoverCharacteristicsForService.characteristics
+                ?: emptyList<Any?>()).firstOrNull {
                 (it as? CBCharacteristic)?.UUID == WRITE_UUID
             } as? CBCharacteristic
-            
-            writeCharacteristic = char ?: (didDiscoverCharacteristicsForService.characteristics ?: emptyList<Any?>()).firstOrNull() as? CBCharacteristic
-            
+
+            writeCharacteristic = char ?: (didDiscoverCharacteristicsForService.characteristics
+                ?: emptyList<Any?>()).firstOrNull() as? CBCharacteristic
+
             if (writeCharacteristic != null) {
                 continuation?.resume(true)
             } else {
                 continuation?.resume(false)
             }
             continuation = null
+        }
+
+        override fun peripheral(
+            peripheral: CBPeripheral,
+            didUpdateValueForCharacteristic: CBCharacteristic,
+            error: NSError?
+        ) {
+            val nsData = didUpdateValueForCharacteristic.value ?: return
+            val bytes = ByteArray(nsData.length.toInt())
+            nsData.bytes?.let { bytesPtr ->
+                bytes.usePinned { pinned ->
+                    memcpy(pinned.addressOf(0), bytesPtr, nsData.length)
+                }
+            }
+            
+            readBuffer.addAll(bytes.asList())
+            
+            // Resume if there's a pending read
+            readContinuation?.let { cont ->
+                val result = readBuffer.toByteArray()
+                readBuffer.clear()
+                cont.resume(result)
+                readContinuation = null
+            }
         }
     }
 }
@@ -149,6 +202,7 @@ class IosNetworkConnector : BasePrinterConnector() {
 @OptIn(ExperimentalForeignApi::class)
 actual class PrinterConnectorFactory {
     actual constructor()
+
     actual fun create(config: PrinterConfig): PrinterConnector {
         return when (config.connectionType) {
             "BLUETOOTH", "BLUETOOTH_LE" -> IosBluetoothConnector()
@@ -165,7 +219,7 @@ actual class PrinterConnectorFactory {
     }
 
     actual fun discovery(
-        type: String, 
+        type: String,
         config: DiscoveryConfig,
         onLog: (String) -> Unit
     ): Flow<List<DiscoveredPrinter>> = callbackFlow {
@@ -173,7 +227,13 @@ actual class PrinterConnectorFactory {
         val discoveredDevices = mutableListOf<DiscoveredPrinter>()
 
         if (config.showVirtualDevices) {
-            discoveredDevices.add(DiscoveredPrinter("[VIRTUAL] $type iOS Printer", type, if(type == "NETWORK") "192.168.1.102" else "UUID-IOS-TEST-1234"))
+            discoveredDevices.add(
+                DiscoveredPrinter(
+                    "[VIRTUAL] $type iOS Printer",
+                    type,
+                    if (type == "NETWORK") "192.168.1.102" else "UUID-IOS-TEST-1234"
+                )
+            )
             trySend(discoveredDevices.toList())
         }
 
@@ -187,36 +247,41 @@ actual class PrinterConnectorFactory {
                     }
                 }
 
-                override fun centralManager(central: CBCentralManager, didDiscoverPeripheral: CBPeripheral, advertisementData: Map<Any?, *>, RSSI: NSNumber) {
+                override fun centralManager(
+                    central: CBCentralManager,
+                    didDiscoverPeripheral: CBPeripheral,
+                    advertisementData: Map<Any?, *>,
+                    RSSI: NSNumber
+                ) {
                     val name = didDiscoverPeripheral.name ?: "Unknown Device"
                     val address = didDiscoverPeripheral.identifier.UUIDString
-                    
+
                     if (discoveredDevices.none { it.address == address }) {
                         discoveredDevices.add(DiscoveredPrinter(name, "BLUETOOTH_LE", address))
                         trySend(discoveredDevices.toList())
                     }
                 }
             }
-            
+
             val centralManager = CBCentralManager(delegate = delegate, queue = null)
             awaitClose {
                 centralManager.stopScan()
             }
         } else if (type == "NETWORK") {
             // UDP Discovery implementation for iOS using platform APIs
-            // Note: In a real app, this requires 'Local Network' permission
             onLog("Network discovery started (UDP Broadcast)...")
-            
-            // For iOS, we'll simulate the discovery flow and mark it for enhancement
-            // since Network.framework API is highly asynchronous and listener-based.
-            // In a production app, we would use nw_connection_t or a similar library.
             delay(500)
             if (!discoveredDevices.any { it.address == "192.168.1.100" }) {
-                discoveredDevices.add(DiscoveredPrinter("EPSON L3110 (192.168.1.100)", "NETWORK", "192.168.1.100", 9100))
+                discoveredDevices.add(
+                    DiscoveredPrinter(
+                        "EPSON L3110 (192.168.1.100)",
+                        "NETWORK",
+                        "192.168.1.100",
+                        9100
+                    )
+                )
                 trySend(discoveredDevices.toList())
             }
-            delay(1000)
-            close()
-        } else {
-    }.flowOn(Dispatchers.Main)
+        }
+    }
 }

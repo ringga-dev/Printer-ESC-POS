@@ -22,7 +22,17 @@ class AndroidBluetoothConnector : BasePrinterConnector() {
         val address = config.address ?: return@withContext false
         val context = PrinterInitializer.getContext()
         val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        val adapter = bluetoothManager.adapter ?: return@withContext false
+        val adapter = bluetoothManager.adapter
+        
+        if (adapter == null) {
+            println("PrinterBT: Error - Bluetooth adapter not available")
+            return@withContext false
+        }
+        
+        if (!adapter.isEnabled) {
+            println("PrinterBT: Error - Bluetooth is disabled")
+            return@withContext false
+        }
         
         // Ensure standard disconnect first to clear previous state
         disconnect()
@@ -31,28 +41,39 @@ class AndroidBluetoothConnector : BasePrinterConnector() {
             val device = adapter.getRemoteDevice(address)
             adapter.cancelDiscovery()
             
+            println("PrinterBT: Attempting to connect to ${device.name} ($address)")
+            
             // Try standard way
             try {
                 socket = device.createRfcommSocketToServiceRecord(SPP_UUID)
                 socket?.connect()
-                if (socket?.isConnected == true) return@withContext true
+                if (socket?.isConnected == true) {
+                    println("PrinterBT: Connected successfully using standard RFCOMM")
+                    return@withContext true
+                }
             } catch (e: Exception) {
+                println("PrinterBT: Standard RFCOMM failed: ${e.message}")
                 socket?.close()
                 socket = null
             }
 
             // Fallback for some devices (reflection)
+            println("PrinterBT: Attempting reflection fallback (channel 1)")
             try {
                 val m = device.javaClass.getMethod("createRfcommSocket", Int::class.javaPrimitiveType)
                 socket = m.invoke(device, 1) as BluetoothSocket
                 socket?.connect()
-                socket?.isConnected == true
+                val success = socket?.isConnected == true
+                if (success) println("PrinterBT: Connected successfully using reflection")
+                success
             } catch (e2: Exception) {
+                println("PrinterBT: Reflection fallback failed: ${e2.message}")
                 socket?.close()
                 socket = null
                 false
             }
         } catch (e: Exception) {
+            println("PrinterBT: General connection error: ${e.message}")
             socket?.close()
             socket = null
             false

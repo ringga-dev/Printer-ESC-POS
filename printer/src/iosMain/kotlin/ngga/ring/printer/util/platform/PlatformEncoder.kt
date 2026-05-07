@@ -1,11 +1,12 @@
 package ngga.ring.printer.util.platform
 
 import platform.Foundation.*
+import platform.posix.memcpy
 import kotlinx.cinterop.*
 
 @OptIn(ExperimentalForeignApi::class)
 actual fun encodeString(text: String, charsetName: String): ByteArray {
-    val nsString = text as NSString
+    val nsString = NSString.create(string = text)
     val encoding = when (charsetName.uppercase()) {
         "UTF-8" -> NSUTF8StringEncoding
         "WINDOWS-1252" -> NSWindowsCP1252StringEncoding

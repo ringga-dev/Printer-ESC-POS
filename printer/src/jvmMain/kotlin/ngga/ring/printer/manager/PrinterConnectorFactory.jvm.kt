@@ -4,7 +4,7 @@ import ngga.ring.printer.model.PrinterConfig
 import ngga.ring.printer.model.DiscoveredPrinter
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.NonCancellable.isActive
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -21,9 +21,11 @@ class JvmNetworkConnector : BasePrinterConnector() {
     override suspend fun connect(config: PrinterConfig): Boolean = withContext(Dispatchers.IO) {
         try {
             socket = Socket()
-            socket?.connect(InetSocketAddress(config.address ?: "127.0.0.1", config.port), 5000)
+            socket?.connect(InetSocketAddress(config.address ?: "127.0.0.1", config.port), config.connectionTimeoutMs)
+            socket?.soTimeout = config.readTimeoutMs
             socket?.isConnected ?: false
         } catch (e: Exception) {
+            println("PrinterJVM: Network connection failed: ${e.message}")
             false
         }
     }

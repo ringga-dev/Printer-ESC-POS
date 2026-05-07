@@ -16,6 +16,8 @@ data class PrinterConfig(
     val autoCenter: Boolean = false,
     val charsetName: String = "UTF-8",
     val escPosCodePage: Byte = 0x00,
+    val connectionTimeoutMs: Int = 5000,
+    val readTimeoutMs: Int = 2000,
 )
 
 /**
@@ -29,6 +31,18 @@ data class PrinterStatus(
     val isError: Boolean = false,
     val rawBytes: ByteArray? = null
 )
+
+/**
+ * Real-time events emitted by the printer monitor.
+ */
+sealed class PrinterStatusEvent {
+    object Online : PrinterStatusEvent()
+    object Offline : PrinterStatusEvent()
+    object CoverOpen : PrinterStatusEvent()
+    object PaperOut : PrinterStatusEvent()
+    object PaperNearEnd : PrinterStatusEvent()
+    data class Error(val message: String) : PrinterStatusEvent()
+}
 
 /**
  * Result from a printer discovery process.

@@ -2,6 +2,8 @@ package ngga.ring.printer.util.template
 
 import ngga.ring.printer.util.escpos.ESCPosCommandBuilder
 import ngga.ring.printer.util.escpos.TextAlignment
+import ngga.ring.printer.model.BarcodeType
+import ngga.ring.printer.model.QRCodeLevel
 
 /**
  * A declarative representation of a receipt element.
@@ -34,6 +36,14 @@ sealed class TemplateElement {
 
     data class Barcode(
         val data: String,
+        val type: BarcodeType = BarcodeType.CODE128,
+        val alignment: TextAlignment = TextAlignment.CENTER
+    ) : TemplateElement()
+
+    data class QRCode(
+        val data: String,
+        val size: Int = 8,
+        val level: QRCodeLevel = QRCodeLevel.L,
         val alignment: TextAlignment = TextAlignment.CENTER
     ) : TemplateElement()
 }
@@ -80,7 +90,11 @@ data class ReceiptTemplate(
                 }
                 is TemplateElement.Barcode -> {
                     val data = injectVariables(element.data, variables)
-                    builder.barcode(data, center = element.alignment == TextAlignment.CENTER)
+                    builder.barcode(data, type = element.type, center = element.alignment == TextAlignment.CENTER)
+                }
+                is TemplateElement.QRCode -> {
+                    val data = injectVariables(element.data, variables)
+                    builder.qrCode(data, size = element.size, level = element.level, center = element.alignment == TextAlignment.CENTER)
                 }
             }
         }

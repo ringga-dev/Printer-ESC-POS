@@ -71,6 +71,10 @@ kotlin {
             implementation("net.java.dev.jna:jna-platform:5.14.0")
             implementation("org.apache.pdfbox:pdfbox:3.0.1")
         }
+
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+        }
     }
 }
 

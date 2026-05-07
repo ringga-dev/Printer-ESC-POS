@@ -15,7 +15,8 @@ class AndroidNetworkConnector : BasePrinterConnector() {
     override suspend fun connect(config: PrinterConfig): Boolean = withContext(Dispatchers.IO) {
         try {
             socket = Socket()
-            socket?.connect(InetSocketAddress(config.address ?: "127.0.0.1", config.port), 5000)
+            socket?.connect(InetSocketAddress(config.address ?: "127.0.0.1", config.port), config.connectionTimeoutMs)
+            socket?.soTimeout = config.readTimeoutMs
             socket?.isConnected ?: false
         } catch (e: Exception) {
             false

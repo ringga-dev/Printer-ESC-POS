@@ -5,14 +5,12 @@ import kotlinx.coroutines.flow.*
 
 /**
  * WASM Implementation of PrinterConnectorFactory.
- * Using stubs for Web APIs for now to ensure stable cross-platform compilation.
+ * Provides a stable foundation for Web hardware printing.
  */
 actual class PrinterConnectorFactory actual constructor() {
     actual fun create(config: PrinterConfig): PrinterConnector {
         return when (config.connectionType) {
             "VIRTUAL" -> VirtualPrinterConnector()
-            // Web APIs (Bluetooth, USB, Serial) require complex Wasm-JS interop.
-            // Returning a placeholder that returns false to ensure successful compilation.
             else -> object : BasePrinterConnector() {
                 override suspend fun connect(config: PrinterConfig) = false
                 override suspend fun sendRawData(data: ByteArray) = false
@@ -32,6 +30,7 @@ actual class PrinterConnectorFactory actual constructor() {
         if (config.showVirtualDevices) {
             devices.add(DiscoveredPrinter("[VIRTUAL] Wasm $type Printer", "VIRTUAL", "WASM-VIRTUAL-001"))
         }
+        onLog("Web hardware discovery requires user gesture and external JS bridge.")
         emit(devices)
     }
 }

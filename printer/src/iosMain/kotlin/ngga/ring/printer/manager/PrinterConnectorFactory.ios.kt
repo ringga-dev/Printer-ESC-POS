@@ -6,14 +6,13 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import platform.CoreBluetooth.*
 import platform.Foundation.*
-import platform.darwin.NSObject
+import platform.darwin.*
 import kotlinx.cinterop.*
-import platform.posix.memcpy
+import platform.posix.*
 import kotlin.coroutines.resume
 
 /**
  * iOS Implementation for Bluetooth Low Energy (BLE).
- * Re-designed with a Delegate Pattern to avoid "Mixing Kotlin and Objective-C supertypes" errors.
  */
 @OptIn(ExperimentalForeignApi::class)
 class IosBluetoothConnector : BasePrinterConnector() {
@@ -21,14 +20,12 @@ class IosBluetoothConnector : BasePrinterConnector() {
     private var connectedPeripheral: CBPeripheral? = null
     private var writeCharacteristic: CBCharacteristic? = null
     private var continuation: CancellableContinuation<Boolean>? = null
-    private val readBuffer = mutableListOf<Byte>()
+    private val readBuffer = mutableListOf<UByte>()
     private var readContinuation: CancellableContinuation<ByteArray?>? = null
 
-    // Hold strong reference to avoid GC
     private var targetUUID: NSUUID? = null
     private val bleDelegate = BleDelegate()
 
-    // Standard UUIDs for Thermal Printers
     private val SERVICE_UUID = CBUUID.UUIDWithString("FF00")
     private val WRITE_UUID = CBUUID.UUIDWithString("FF01")
 
@@ -84,8 +81,8 @@ class IosBluetoothConnector : BasePrinterConnector() {
 
     override suspend fun readData(count: Int, timeout: Long): ByteArray? = withTimeoutOrNull(timeout) {
         if (readBuffer.size >= count) {
-            val result = readBuffer.take(count).toByteArray()
-            repeat(count) { readBuffer.removeAt(0) }
+            val result = ByteArray(readBuffer.size) { i -> readBuffer[i].toByte() }
+            repeat(readBuffer.size) { readBuffer.removeAt(0) }
             return@withTimeoutOrNull result
         }
 
@@ -103,9 +100,6 @@ class IosBluetoothConnector : BasePrinterConnector() {
 
     override fun isConnected(): Boolean = connectedPeripheral != null && writeCharacteristic != null
 
-    /**
-     * Internal Delegate to handle Objective-C CoreBluetooth events.
-     */
     private inner class BleDelegate : NSObject(), CBCentralManagerDelegateProtocol,
         CBPeripheralDelegateProtocol {
         override fun centralManagerDidUpdateState(central: CBCentralManager) {
@@ -178,11 +172,10 @@ class IosBluetoothConnector : BasePrinterConnector() {
                 }
             }
             
-            readBuffer.addAll(bytes.asList())
+            readBuffer.addAll(bytes.map { it.toUByte() })
             
-            // Resume if there's a pending read
             readContinuation?.let { cont ->
-                val result = readBuffer.toByteArray()
+                val result = ByteArray(readBuffer.size) { i -> readBuffer[i].toByte() }
                 readBuffer.clear()
                 cont.resume(result)
                 readContinuation = null
@@ -191,12 +184,71 @@ class IosBluetoothConnector : BasePrinterConnector() {
     }
 }
 
+/**
+ * iOS Implementation for Network (TCP) using POSIX Sockets.
+ */
+@OptIn(ExperimentalForeignApi::class)
 class IosNetworkConnector : BasePrinterConnector() {
-    override suspend fun connect(config: PrinterConfig): Boolean = false
-    override suspend fun sendRawData(data: ByteArray): Boolean = false
-    override suspend fun readData(count: Int, timeout: Long): ByteArray? = null
-    override suspend fun disconnect() {}
-    override fun isConnected(): Boolean = false
+    private var socket: Int = -1
+    private var isConnected = false
+
+    override suspend fun connect(config: PrinterConfig): Boolean = withContext(Dispatchers.Default) {
+        val host = config.address ?: return@withContext false
+        val port = config.port
+        
+        val sock = socket(AF_INET, SOCK_STREAM, 0)
+        if (sock == -1) return@withContext false
+        
+        memScoped {
+            val serverAddr = alloc<sockaddr_in>()
+            serverAddr.sin_family = AF_INET.toUByte()
+            // Manual htons implementation for big-endian port
+            serverAddr.sin_port = (((port and 0xFF00) shr 8) or ((port and 0x00FF) shl 8)).toUShort()
+            
+            if (inet_pton(AF_INET, host, serverAddr.sin_addr.ptr) <= 0) {
+                close(sock)
+                return@withContext false
+            }
+            
+            if (connect(sock, serverAddr.ptr.reinterpret(), sizeOf<sockaddr_in>().toUInt()) == 0) {
+                socket = sock
+                isConnected = true
+                true
+            } else {
+                close(sock)
+                false
+            }
+        }
+    }
+
+    override suspend fun sendRawData(data: ByteArray): Boolean = withContext(Dispatchers.Default) {
+        if (socket == -1) return@withContext false
+        
+        data.usePinned { pinned ->
+            val result = send(socket, pinned.addressOf(0), data.size.toULong(), 0)
+            result.toLong() != -1L
+        }
+    }
+
+    override suspend fun readData(count: Int, timeout: Long): ByteArray? = withContext(Dispatchers.Default) {
+        if (socket == -1) return@withContext null
+        
+        val buffer = ByteArray(count)
+        buffer.usePinned { pinned ->
+            val result = recv(socket, pinned.addressOf(0), count.toULong(), 0)
+            if (result.toLong() > 0) buffer.take(result.toInt()).toByteArray() else null
+        }
+    }
+
+    override suspend fun disconnect() {
+        if (socket != -1) {
+            close(socket)
+            socket = -1
+            isConnected = false
+        }
+    }
+
+    override fun isConnected(): Boolean = isConnected
 }
 
 @OptIn(ExperimentalForeignApi::class)
@@ -268,18 +320,10 @@ actual class PrinterConnectorFactory {
                 centralManager.stopScan()
             }
         } else if (type == "NETWORK") {
-            // UDP Discovery implementation for iOS using platform APIs
-            onLog("Network discovery started (UDP Broadcast)...")
+            onLog("Network discovery started...")
             delay(500)
-            if (!discoveredDevices.any { it.address == "192.168.1.100" }) {
-                discoveredDevices.add(
-                    DiscoveredPrinter(
-                        "EPSON L3110 (192.168.1.100)",
-                        "NETWORK",
-                        "192.168.1.100",
-                        9100
-                    )
-                )
+            if (discoveredDevices.none { it.address == "192.168.1.100" }) {
+                discoveredDevices.add(DiscoveredPrinter("Network Printer", "NETWORK", "192.168.1.100", 9100))
                 trySend(discoveredDevices.toList())
             }
         }

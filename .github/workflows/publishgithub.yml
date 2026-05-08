@@ -139,27 +139,28 @@ jobs:
       
       - name: Create Sonatype Bundle
         run: |
+          BUNDLE_NAME="sonatype-bundle-${{ needs.setup.outputs.lib_version }}.zip"
           cd printer/build/repo
-          zip -r -X ../../../sonatype-bundle.zip .
-          zip -d ../../../sonatype-bundle.zip "__MACOSX*" "*.DS_Store*" || true
+          zip -r -X "../../../$BUNDLE_NAME" .
+          zip -d "../../../$BUNDLE_NAME" "__MACOSX*" "*.DS_Store*" || true
       
       - name: Verify Bundle Contents (Diagnosa)
         run: |
-          echo "Listing contents of sonatype-bundle.zip to verify .asc files..."
-          unzip -l sonatype-bundle.zip
+          BUNDLE_NAME="sonatype-bundle-${{ needs.setup.outputs.lib_version }}.zip"
+          echo "Listing contents of $BUNDLE_NAME to verify .asc files..."
+          unzip -l "$BUNDLE_NAME"
 
       - name: Upload to Sonatype Central Portal (Official API v1)
         run: |
-          # Step 1: Generate Base64 token safely (strip newlines)
+          BUNDLE_NAME="sonatype-bundle-${{ needs.setup.outputs.lib_version }}.zip"
+          # Step 1: Generate Base64 token safely
           AUTH_TOKEN=$(printf "%s:%s" "${{ secrets.MAVEN_USERNAME }}" "${{ secrets.MAVEN_PASSWORD }}" | base64 | tr -d '\n')
           
-          # Step 2: Upload using official endpoint
-          RESPONSE=$(curl --verbose \
-            --request POST \
+          # Step 2: Upload using OFFICIAL Query Parameter format with single quotes to avoid URL errors
+          RESPONSE=$(curl --verbose --fail \
             --header "Authorization: Bearer $AUTH_TOKEN" \
-            --form "bundle=@sonatype-bundle.zip" \
-            --fail \
-            "https://central.sonatype.com/api/v1/publisher/upload?name=KmpPrinter-${{ needs.setup.outputs.lib_version }}&publishingType=USER_MANAGED")
+            --form "bundle=@$BUNDLE_NAME" \
+            'https://central.sonatype.com/api/v1/publisher/upload?name=KmpPrinter-${{ needs.setup.outputs.lib_version }}&publishingType=USER_MANAGED')
           
           echo "Response from Sonatype: $RESPONSE"
 
@@ -167,9 +168,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sonatype-central-bundle
-          path: sonatype-bundle.zip
+          path: sonatype-bundle-${{ needs.setup.outputs.lib_version }}.zip
 
-  # 7. Final: Create GitHub Release (Runs as soon as builds are ready, ignores Maven failure)
+  # 7. Final: Create GitHub Release
   create-release:
     name: Create GitHub Release
     needs: [setup, build-android, build-ios, build-jvm]
@@ -195,10 +196,15 @@ jobs:
             release_artifacts/sonatype-central-bundle/**/*
           body: |
             ## 🚀 KmpPrinter v${{ needs.setup.outputs.lib_version }}
-            🌍 Integration (Maven Central)
+            
+            KmpPrinter: Professional Kotlin Multiplatform Thermal Printing Library for ESC/POS.
+
+            ### 🌍 Integration (Maven Central)
             ```kotlin
             implementation("io.github.ringga-dev:kmp_printer:${{ needs.setup.outputs.lib_version }}")
             ```
+            
+            *Note: Sonatype bundle is attached for manual release if automated publishing is still processing.*
           draft: false
           prerelease: false
           make_latest: true

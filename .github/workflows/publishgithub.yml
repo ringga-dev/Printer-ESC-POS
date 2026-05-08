@@ -128,22 +128,26 @@ jobs:
         uses: android-actions/setup-android@v3
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+      
       - name: Publish to Local Folder
         env:
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
           GPG_PASSWORD: ${{ secrets.GPG_PASSWORD }}
-        run: ./gradlew :printer:publishAllPublicationsToLocalRepoRepository --no-daemon --no-configuration-cache
+        run: |
+          ./gradlew clean :printer:publishAllPublicationsToLocalRepoRepository --no-daemon --no-configuration-cache
       
       - name: Create Sonatype Bundle
         run: |
           cd printer/build/repo
-          zip -r ../../../sonatype-bundle.zip .
+          # -X to exclude MacOS extra attributes, -r for recursive
+          zip -r -X ../../../sonatype-bundle.zip .
+          # Double check and remove any hidden trash if zip -X missed it
+          zip -d ../../../sonatype-bundle.zip "__MACOSX*" "*.DS_Store*" || true
       
       - name: Upload to Sonatype Central Portal
         run: |
           RESPONSE=$(curl --verbose \
             --request POST \
-            --header "Accept: application/json" \
             --user "${{ secrets.MAVEN_USERNAME }}:${{ secrets.MAVEN_PASSWORD }}" \
             --form "bundle=@sonatype-bundle.zip" \
             --fail \

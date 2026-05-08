@@ -101,6 +101,8 @@ publishing {
                 archiveClassifier.set("javadoc")
                 archiveBaseName.set("printer-${name.lowercase()}")
                 archiveVersion.set(version.toString())
+                // Menambahkan isi ke Javadoc agar tidak 0 bytes (mencegah Error 500 Sonatype)
+                from(project.rootDir.resolve("README.md"))
             }
             artifact(javadocJar)
 
@@ -138,8 +140,6 @@ publishing {
     }
 }
 
-// Pindahkan Signing ke paling bawah dan hapus kondisi 'if' agar Gradle gagal jika Secret tidak ada
-// Ini akan memaksa kita tahu apakah Signing benar-benar berjalan atau tidak.
 signing {
     val signingKey = System.getenv("GPG_SIGNING_KEY") ?: (project.findProperty("signingKey") as? String)
     val signingPassword = System.getenv("GPG_PASSWORD") ?: (project.findProperty("signingPassword") as? String)
@@ -148,7 +148,6 @@ signing {
         useInMemoryPgpKeys(signingKey, signingPassword)
         sign(publishing.publications)
     } else {
-        // Beri peringatan keras jika signing terlewati di CI
         println("WARNING: GPG Signing is SKIPPED because keys are missing!")
     }
 }

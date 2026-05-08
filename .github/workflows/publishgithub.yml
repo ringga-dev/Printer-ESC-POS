@@ -148,16 +148,19 @@ jobs:
           echo "Listing contents of sonatype-bundle.zip to verify .asc files..."
           unzip -l sonatype-bundle.zip
 
-      - name: Upload to Sonatype Central Portal
+      - name: Upload to Sonatype Central Portal (Official API v1)
         run: |
+          # Step 1: Generate Base64 token from username:password
+          AUTH_TOKEN=$(echo -n "${{ secrets.MAVEN_USERNAME }}:${{ secrets.MAVEN_PASSWORD }}" | base64)
+          
+          # Step 2: Upload using official endpoint: /api/v1/publisher/upload
           RESPONSE=$(curl --verbose \
             --request POST \
-            --user "${{ secrets.MAVEN_USERNAME }}:${{ secrets.MAVEN_PASSWORD }}" \
+            --header "Authorization: Bearer $AUTH_TOKEN" \
             --form "bundle=@sonatype-bundle.zip" \
-            --form "name=KmpPrinter-${{ needs.setup.outputs.lib_version }}" \
-            --form "publishingType=USER_MANAGED" \
             --fail \
-            https://central.sonatype.com/api/v1/publisher/deployments)
+            "https://central.sonatype.com/api/v1/publisher/upload?name=KmpPrinter-${{ needs.setup.outputs.lib_version }}&publishingType=USER_MANAGED")
+          
           echo "Response from Sonatype: $RESPONSE"
 
       - name: Archive Sonatype Bundle

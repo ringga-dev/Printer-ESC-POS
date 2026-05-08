@@ -36,10 +36,11 @@ jobs:
       lib_version: ${{ steps.get_version.outputs.LIB_VERSION }}
     steps:
       - uses: actions/checkout@v4
-      - name: Get Version from properties
+      - name: Get Version from properties (with trimming)
         id: get_version
         run: |
-          VERSION=$(grep 'LIB_VERSION=' gradle.properties | cut -d'=' -f2)
+          # Menggunakan xargs untuk menghapus spasi di awal/akhir
+          VERSION=$(grep 'LIB_VERSION=' gradle.properties | cut -d'=' -f2 | xargs)
           echo "LIB_VERSION=$VERSION" >> $GITHUB_OUTPUT
 
   # 2. Build Android AAR
@@ -159,14 +160,21 @@ jobs:
       - name: Upload to Sonatype Central Portal (Official API v1)
         run: |
           BUNDLE_NAME="sonatype-bundle-${{ needs.setup.outputs.lib_version }}.zip"
-          # Step 1: Generate Base64 token safely
-          AUTH_TOKEN=$(printf "%s:%s" "${{ secrets.MAVEN_USERNAME }}" "${{ secrets.MAVEN_PASSWORD }}" | base64 | tr -d '\n')
+          
+          # Step 1: Generate Base64 token safely (with trimming)
+          # Menggunakan xargs untuk membersihkan spasi dari secret
+          CLEAN_USER=$(echo -n "${{ secrets.MAVEN_USERNAME }}" | xargs)
+          CLEAN_PASS=$(echo -n "${{ secrets.MAVEN_PASSWORD }}" | xargs)
+          AUTH_TOKEN=$(printf "%s:%s" "$CLEAN_USER" "$CLEAN_PASS" | base64 | tr -d '\n')
           
           # Step 2: Upload using OFFICIAL Query Parameter format
+          # Menggunakan variabel URL agar lebih mudah didebug
+          DEPLOY_URL="https://central.sonatype.com/api/v1/publisher/upload?name=KmpPrinter-${{ needs.setup.outputs.lib_version }}&publishingType=USER_MANAGED"
+          
           RESPONSE=$(curl --verbose --fail \
             --header "Authorization: Bearer $AUTH_TOKEN" \
             --form "bundle=@$BUNDLE_NAME" \
-            'https://central.sonatype.com/api/v1/publisher/upload?name=KmpPrinter-${{ needs.setup.outputs.lib_version }}&publishingType=USER_MANAGED')
+            "$DEPLOY_URL")
           
           echo "Response from Sonatype: $RESPONSE"
 

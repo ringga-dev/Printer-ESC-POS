@@ -112,33 +112,6 @@ jobs:
           name: kmp_printer-jvm
           path: printer/build/libs/printer-jvm-*.jar
 
-#   # 5. GitHub Channel: Maven Repo Branch
-#   publish-github-maven:
-#     name: Publish to GitHub Repo
-#     needs: setup
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: actions/checkout@v4
-#       - uses: actions/setup-java@v4
-#         with:
-#           java-version: '17'
-#           distribution: 'temurin'
-#           cache: 'gradle'
-#       - name: Grant execute permission for gradlew
-#         run: chmod +x gradlew
-#       - name: Publish to Local Folder
-#         run: ./gradlew :printer:publishAllPublicationsToLocalRepoRepository --no-daemon --no-configuration-cache
-#       - name: Deploy to maven-repo branch
-#         uses: peaceiris/actions-gh-pages@v4
-#         with:
-#           github_token: ${{ secrets.GITHUB_TOKEN }}
-#           publish_dir: ./printer/build/repo
-#           publish_branch: maven-repo
-#           force_orphan: false
-#           user_name: 'github-actions[bot]'
-#           user_email: 'github-actions[bot]@users.noreply.github.com'
-#           commit_message: "Publish version ${{ needs.setup.outputs.lib_version }}"
-
   # 6. Sonatype Central Channel: Automated Publishing
   publish-sonatype:
     name: Publish to Maven Central
@@ -168,11 +141,20 @@ jobs:
       
       - name: Upload to Sonatype Central Portal
         run: |
-          curl --verbose \
+          RESPONSE=$(curl --verbose \
             --request POST \
+            --header "Accept: application/json" \
             --user "${{ secrets.MAVEN_USERNAME }}:${{ secrets.MAVEN_PASSWORD }}" \
             --form "bundle=@sonatype-bundle.zip" \
-            https://central.sonatype.com/api/v1/publisher/deployments
+            --fail \
+            https://central.sonatype.com/api/v1/publisher/deployments)
+          echo "Response from Sonatype: $RESPONSE"
+
+      - name: Archive Sonatype Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonatype-central-bundle
+          path: sonatype-bundle.zip
 
   # 7. Final: Create GitHub Release (COMPLETELY AUTOMATIC)
   create-release:
@@ -213,7 +195,7 @@ jobs:
             ```kotlin
             implementation("io.github.ringga-dev:kmp_printer:${{ needs.setup.outputs.lib_version }}")
             ```
-
+            
             ### 🌍 Integration (Maven Central)
             ```kotlin
             implementation("io.github.ringga-dev:kmp_printer:${{ needs.setup.outputs.lib_version }}")
@@ -222,7 +204,6 @@ jobs:
           prerelease: false
           make_latest: true
           generate_release_notes: true
-          # Crucial: Allow creating/updating the tag if it matches the current setup
           allowUpdates: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

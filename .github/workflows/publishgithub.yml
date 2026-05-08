@@ -162,13 +162,11 @@ jobs:
           BUNDLE_NAME="sonatype-bundle-${{ needs.setup.outputs.lib_version }}.zip"
           
           # Step 1: Generate Base64 token safely (with trimming)
-          # Menggunakan xargs untuk membersihkan spasi dari secret
-          CLEAN_USER=$(echo -n "${{ secrets.MAVEN_USERNAME }}" | xargs)
-          CLEAN_PASS=$(echo -n "${{ secrets.MAVEN_PASSWORD }}" | xargs)
+          CLEAN_USER=$(printf "%s" "${{ secrets.MAVEN_USERNAME }}" | xargs)
+          CLEAN_PASS=$(printf "%s" "${{ secrets.MAVEN_PASSWORD }}" | xargs)
           AUTH_TOKEN=$(printf "%s:%s" "$CLEAN_USER" "$CLEAN_PASS" | base64 | tr -d '\n')
           
           # Step 2: Upload using OFFICIAL Query Parameter format
-          # Menggunakan variabel URL agar lebih mudah didebug
           DEPLOY_URL="https://central.sonatype.com/api/v1/publisher/upload?name=KmpPrinter-${{ needs.setup.outputs.lib_version }}&publishingType=USER_MANAGED"
           
           RESPONSE=$(curl --verbose --fail \

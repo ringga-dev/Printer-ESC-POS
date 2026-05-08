@@ -96,8 +96,6 @@ android {
 publishing {
     publications {
         withType<MavenPublication> {
-            // Unik Javadoc Jar untuk semua target (Wajib untuk Maven Central)
-            // Sources Jar tidak perlu ditambahkan manual karena sudah otomatis oleh KMP
             val javadocJarTaskName = "javadocJarFor${name.replaceFirstChar { it.uppercase() }}"
             val javadocJar = tasks.register<Jar>(javadocJarTaskName) {
                 archiveClassifier.set("javadoc")
@@ -140,6 +138,8 @@ publishing {
     }
 }
 
+// Pindahkan Signing ke paling bawah dan hapus kondisi 'if' agar Gradle gagal jika Secret tidak ada
+// Ini akan memaksa kita tahu apakah Signing benar-benar berjalan atau tidak.
 signing {
     val signingKey = System.getenv("GPG_SIGNING_KEY") ?: (project.findProperty("signingKey") as? String)
     val signingPassword = System.getenv("GPG_PASSWORD") ?: (project.findProperty("signingPassword") as? String)
@@ -147,5 +147,8 @@ signing {
     if (signingKey != null && signingPassword != null) {
         useInMemoryPgpKeys(signingKey, signingPassword)
         sign(publishing.publications)
+    } else {
+        // Beri peringatan keras jika signing terlewati di CI
+        println("WARNING: GPG Signing is SKIPPED because keys are missing!")
     }
 }

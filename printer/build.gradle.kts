@@ -101,17 +101,16 @@ val kmpSourcesJar by tasks.registering(Jar::class) {
     from(kotlin.sourceSets.getByName("commonMain").kotlin)
 }
 
-// Dummy Javadoc JAR to satisfy Maven Central requirements and avoid Dokka bugs
-val kmpJavadocJar by tasks.registering(Jar::class) {
-    archiveClassifier.set("javadoc")
-    from(projectDir.resolve("README.md"))
-}
-
 publishing {
     publications {
         withType<MavenPublication> {
-            // Add Javadoc JAR to all publications (required by Maven Central)
-            artifact(kmpJavadocJar)
+            // Create a unique Javadoc JAR for each publication to avoid parallel task conflicts
+            val javadocJarTask = tasks.register<Jar>("javadocJarFor${name.replaceFirstChar { it.uppercase() }}") {
+                archiveClassifier.set("javadoc")
+                archiveBaseName.set("printer-${name.lowercase()}")
+                from(projectDir.resolve("README.md"))
+            }
+            artifact(javadocJarTask)
 
             pom {
                 name.set("KmpPrinter")

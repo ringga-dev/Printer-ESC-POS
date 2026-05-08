@@ -32,6 +32,9 @@ class PrinterViewModel : ViewModel() {
     private val _discoveryLog = MutableStateFlow("Ready to scan...")
     val discoveryLog: StateFlow<String> = _discoveryLog.asStateFlow()
 
+    private val _availableModes = MutableStateFlow(listOf("BLUETOOTH", "USB", "NETWORK", "SERIAL"))
+    val availableModes: StateFlow<List<String>> = _availableModes.asStateFlow()
+
     // --- Connection & Print State ---
     val connectionState: StateFlow<ConnectionState> = printer.connectionState
 
@@ -135,10 +138,15 @@ class PrinterViewModel : ViewModel() {
         _config.onEach { updatePreview(it) }.launchIn(viewModelScope)
         
         // Start auto-discovery when mode changes
-        combine(_discoveryMode, _showVirtual) { mode, virtual -> mode to virtual }
-            .onEach { (mode, virtual) ->
-                startDiscovery(mode, virtual)
+        _discoveryMode
+            .onEach { mode ->
+                startDiscovery(mode, _showVirtual.value)
             }.launchIn(viewModelScope)
+        
+        _showVirtual.onEach { virtual ->
+            val base = listOf("BLUETOOTH", "USB", "NETWORK", "SERIAL")
+            _availableModes.value = if (virtual) base + "VIRTUAL" else base
+        }.launchIn(viewModelScope)
     }
 
     fun setDiscoveryMode(mode: String) {

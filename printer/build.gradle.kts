@@ -5,6 +5,7 @@ plugins {
     id("com.android.library")
     id("maven-publish")
     id("signing")
+    id("org.jetbrains.dokka") version "1.9.20"
 }
 
 group = project.property("LIB_GROUP").toString()
@@ -104,11 +105,15 @@ val kmpSourcesJar by tasks.registering(Jar::class) {
 publishing {
     publications {
         withType<MavenPublication> {
-            // Create a unique Javadoc JAR for each publication to avoid parallel task conflicts
+            // Create a unique Javadoc JAR for each publication
             val javadocJarTask = tasks.register<Jar>("javadocJarFor${name.replaceFirstChar { it.uppercase() }}") {
                 archiveClassifier.set("javadoc")
                 archiveBaseName.set("printer-${name.lowercase()}")
-                from(projectDir.resolve("README.md"))
+                
+                // Use Dokka HTML output if available
+                val dokkaTask = tasks.named<org.jetbrains.dokka.gradle.DokkaTask>("dokkaHtml")
+                dependsOn(dokkaTask)
+                from(dokkaTask.map { it.outputDirectory })
             }
             artifact(javadocJarTask)
 
@@ -163,5 +168,16 @@ signing {
     if (signingKey != null && signingPassword != null) {
         useInMemoryPgpKeys(signingKey, signingPassword)
         sign(publishing.publications)
+    }
+}
+
+tasks.withType<org.jetbrains.dokka.gradle.DokkaTask>().configureEach {
+    failOnWarning.set(false)
+    dokkaSourceSets.configureEach {
+        // Skip internal or problematic packages if needed
+        perPackageOption {
+            matchingRegex.set(".*\\.internal.*")
+            suppress.set(true)
+        }
     }
 }

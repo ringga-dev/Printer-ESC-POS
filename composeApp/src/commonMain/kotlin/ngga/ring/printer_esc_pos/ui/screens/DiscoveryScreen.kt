@@ -25,8 +25,8 @@ fun DiscoveryScreen(viewModel: PrinterViewModel) {
     val devices by viewModel.discoveredPrinters.collectAsState()
     val log by viewModel.discoveryLog.collectAsState()
     val mode by viewModel.discoveryMode.collectAsState()
-    val showVirtual by viewModel.showVirtual.collectAsState()
     val config by viewModel.config.collectAsState()
+    val modes by viewModel.availableModes.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
         Text(
@@ -49,9 +49,6 @@ fun DiscoveryScreen(viewModel: PrinterViewModel) {
                 modifier = Modifier.fillMaxWidth().padding(4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val modes = mutableListOf("BLUETOOTH", "USB", "NETWORK")
-                if (showVirtual) modes.add("VIRTUAL")
-                
                 modes.forEach { m ->
                     FilterChip(
                         selected = mode == m,
@@ -123,6 +120,7 @@ fun DiscoveryCard(device: DiscoveredPrinter, isSelected: Boolean, onClick: () ->
                     imageVector = when(device.connectionType) {
                         "NETWORK" -> Icons.Default.Lan
                         "USB" -> Icons.Default.Usb
+                        "SERIAL" -> Icons.Default.SettingsInputComponent
                         "VIRTUAL" -> Icons.Default.Computer
                         else -> Icons.Default.Bluetooth
                     },

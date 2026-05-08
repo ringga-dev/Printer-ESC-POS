@@ -93,18 +93,18 @@ android {
     }
 }
 
-// Global Javadoc Jar (Empty placeholder for Maven Central)
-// Note: sourcesJar is automatically handled by the KMP plugin.
-val kmpJavadocJar by tasks.registering(Jar::class) {
-    archiveClassifier.set("javadoc")
-}
-
 publishing {
     publications {
         withType<MavenPublication> {
-            // Add javadoc to all publications. 
-            // KMP targets already provide their own sources.jar.
-            artifact(kmpJavadocJar)
+            // Unik Javadoc Jar untuk semua target (Wajib untuk Maven Central)
+            // Sources Jar tidak perlu ditambahkan manual karena sudah otomatis oleh KMP
+            val javadocJarTaskName = "javadocJarFor${name.replaceFirstChar { it.uppercase() }}"
+            val javadocJar = tasks.register<Jar>(javadocJarTaskName) {
+                archiveClassifier.set("javadoc")
+                archiveBaseName.set("printer-${name.lowercase()}")
+                archiveVersion.set(version.toString())
+            }
+            artifact(javadocJar)
 
             pom {
                 name.set("KmpPrinter")

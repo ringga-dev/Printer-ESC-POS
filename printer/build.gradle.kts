@@ -93,13 +93,8 @@ android {
     }
 }
 
-// Global Sources Jar (Wajib untuk Maven Central)
-val kmpSourcesJar by tasks.registering(Jar::class) {
-    archiveClassifier.set("sources")
-    from(kotlin.sourceSets.getByName("commonMain").kotlin)
-}
-
-// Global Javadoc Jar (Wajib untuk Maven Central, tapi boleh kosong)
+// Global Javadoc Jar (Empty placeholder for Maven Central)
+// Note: sourcesJar is automatically handled by the KMP plugin.
 val kmpJavadocJar by tasks.registering(Jar::class) {
     archiveClassifier.set("javadoc")
 }
@@ -107,7 +102,8 @@ val kmpJavadocJar by tasks.registering(Jar::class) {
 publishing {
     publications {
         withType<MavenPublication> {
-            artifact(kmpSourcesJar)
+            // Add javadoc to all publications. 
+            // KMP targets already provide their own sources.jar.
             artifact(kmpJavadocJar)
 
             pom {

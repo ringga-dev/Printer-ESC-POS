@@ -5,11 +5,10 @@ plugins {
     id("com.android.library")
     id("maven-publish")
     id("signing")
-    id("org.jetbrains.dokka") version "1.9.20"
 }
 
-group = project.property("LIB_GROUP").toString()
-version = project.property("LIB_VERSION").toString()
+group = project.findProperty("LIB_GROUP")?.toString() ?: "io.github.ringga-dev"
+version = project.findProperty("LIB_VERSION")?.toString() ?: "1.0.0"
 
 kotlin {
     androidTarget {
@@ -36,12 +35,10 @@ kotlin {
 
     wasmJs {
         browser()
-        binaries.executable()
     }
 
     js(IR) {
         browser()
-        binaries.executable()
     }
     
     targets.all {
@@ -96,26 +93,22 @@ android {
     }
 }
 
-// Requirements for Maven Central: Sources Jar
+// Global Sources Jar (Wajib untuk Maven Central)
 val kmpSourcesJar by tasks.registering(Jar::class) {
     archiveClassifier.set("sources")
     from(kotlin.sourceSets.getByName("commonMain").kotlin)
 }
 
+// Global Javadoc Jar (Wajib untuk Maven Central, tapi boleh kosong)
+val kmpJavadocJar by tasks.registering(Jar::class) {
+    archiveClassifier.set("javadoc")
+}
+
 publishing {
     publications {
         withType<MavenPublication> {
-            // Create a unique Javadoc JAR for each publication
-            val javadocJarTask = tasks.register<Jar>("javadocJarFor${name.replaceFirstChar { it.uppercase() }}") {
-                archiveClassifier.set("javadoc")
-                archiveBaseName.set("printer-${name.lowercase()}")
-                
-                // Use Dokka HTML output if available
-                val dokkaTask = tasks.named<org.jetbrains.dokka.gradle.DokkaTask>("dokkaHtml")
-                dependsOn(dokkaTask)
-                from(dokkaTask.map { it.outputDirectory })
-            }
-            artifact(javadocJarTask)
+            artifact(kmpSourcesJar)
+            artifact(kmpJavadocJar)
 
             pom {
                 name.set("KmpPrinter")
@@ -144,16 +137,6 @@ publishing {
     }
 
     repositories {
-        // 1. Sonatype Central (Official Release)
-        maven {
-            name = "Sonatype"
-            url = uri("https://central.sonatype.com/api/v1/publisher/deployments/maven/repository")
-            credentials {
-                username = System.getenv("MAVEN_USERNAME") ?: (project.findProperty("ossrhUsername") as? String)
-                password = System.getenv("MAVEN_PASSWORD") ?: (project.findProperty("ossrhPassword") as? String)
-            }
-        }
-        // 2. Local Repo for GitHub Maven Branch (maven-repo)
         maven {
             name = "LocalRepo"
             url = uri(layout.buildDirectory.dir("repo"))
@@ -168,16 +151,5 @@ signing {
     if (signingKey != null && signingPassword != null) {
         useInMemoryPgpKeys(signingKey, signingPassword)
         sign(publishing.publications)
-    }
-}
-
-tasks.withType<org.jetbrains.dokka.gradle.DokkaTask>().configureEach {
-    failOnWarning.set(false)
-    dokkaSourceSets.configureEach {
-        // Skip internal or problematic packages if needed
-        perPackageOption {
-            matchingRegex.set(".*\\.internal.*")
-            suppress.set(true)
-        }
     }
 }

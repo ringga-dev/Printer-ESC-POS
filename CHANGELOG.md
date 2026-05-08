@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0] - 2026-05-08 (Enterprise SDK Release)
+
+### Added
+- **iOS Perfection**: Full support for real TCP Network printing via POSIX Sockets and refined BLE connectivity with Delegate Pattern.
+- **Real-time Status Monitoring**: Implementation of `PrinterStatusMonitor` for iOS and Android to detect paper-out, cover-open, and other hardware states.
+- **Advanced Image Processing**: New `ImageScaler` with Nearest-Neighbor and Bilinear interpolation for professional logo rendering.
+- **Web (Wasm/JS) Foundation**: Introduced `WasmJSBridge` for WebBluetooth, WebUSB, and Web Serial API support.
+- **Platform Perfection**: Standardized error handling and performance optimizations across Android, JVM, iOS, and Web.
+
+---
+
 ## [1.0.3] - 2026-04-15
 
 ### Added

@@ -1,4 +1,4 @@
-# 🖨️ KmpPrinter (V2.1 Enterprise Hardened)
+# 🖨️ KmpPrinter (V2.0 Enterprise SDK)
 **The Ultimate Kotlin Multiplatform Thermal Printing Suite for Professionals.**
 
 **Languages:** [Bahasa Indonesia](./README.md) | **English** | [简体中文](./README_ZH.md)
@@ -13,7 +13,7 @@
 KmpPrinter is a high-performance, industrial-grade ESC/POS thermal printing library designed for seamless integration across **Android, iOS, JVM (Desktop), and Web (WASM/JS)**. 
 
 > [!IMPORTANT]
-> **Enterprise Edition (V2.1)**: This version is specifically hardened for high-traffic POS systems. It includes **Mutex-based Concurrency Protection** and **Chunked Flow Control** to prevent hardware buffer overflows on low-end thermal printers.
+> **Enterprise Edition (V2.0)**: This version is specifically hardened for high-traffic POS systems. It includes **Real-time Status Monitoring**, **Advanced Image Scaling**, and **iOS Native Network framework** support.
 
 ---
 
@@ -30,9 +30,9 @@ KmpPrinter is a high-performance, industrial-grade ESC/POS thermal printing libr
 
 ## 💎 Premium Industry Features
 
-- **🛡️ Hardened Stability (V2.1)**: Built-in `Mutex` locking prevents data corruption during concurrent print jobs. Automatic `Chunked Sending` (512 bytes with 20ms delay) ensures reliability on budget bluetooth printers.
+- **🛡️ Hardened Stability (V2.0)**: Built-in `Mutex` locking prevents data corruption during concurrent print jobs. Automatic `Chunked Sending` ensures reliability on budget bluetooth printers.
 - **🚀 Ultra-Fast Image Engine**: Optimized dithering algorithms (**Floyd-Steinberg & Atkinson**) using integer fixed-point arithmetic for minimal RAM usage and maximum speed.
-- **🖼️ PDF & Vector Support**: Built-in utility to render PDF or SVG directly to thermal-optimized raster data.
+- **📊 Real-time Monitoring**: Accurately detect printer hardware status (Paper Out, Cover Open, Offline) on Android and iOS.
 - **🌐 Web Support**: Full support for WebBluetooth and WebUSB in KMP WASM/JS targets.
 - **🎨 Visual Preview**: Real-time receipt preview blocks to show exactly what will be printed.
 
@@ -40,14 +40,14 @@ KmpPrinter is a high-performance, industrial-grade ESC/POS thermal printing libr
 
 ---
 
-## 📦 Installation (v1.0.3)
+## 📦 Installation (v2.0.0)
 
 👉 **[DETAILED INSTALLATION GUIDE](./INSTALLATION_EN.md)**
 
 ### Quick Snippet (Gradle KMP)
 ```kotlin
 // commonMain
-implementation("io.github.ringga-dev:kmp_printer:1.0.3")
+implementation("io.github.ringga-dev:kmp_printer:2.0.0")
 ```
 
 ---

@@ -1,4 +1,4 @@
-# 🖨️ KmpPrinter (V2.1 Enterprise Hardened)
+# 🖨️ KmpPrinter (V3.0 Enterprise SDK)
 **Solusi Cetak Thermal Kotlin Multiplatform Terbaik untuk Profesional.**
 
 **Bahasa:** **Bahasa Indonesia** | [English](./README_EN.md) | [简体中文](./README_ZH.md)
@@ -12,7 +12,7 @@
 KmpPrinter adalah library pencetakan thermal ESC/POS kelas industri dengan performa tinggi yang dirancang untuk integrasi mulus di **Android, iOS, JVM (Desktop), dan Web (WASM/JS)**.
 
 > [!IMPORTANT]
-> **Enterprise Edition (V2.1)**: Versi ini telah diperkuat (*hardened*) khusus untuk sistem POS dengan traffic tinggi. Dilengkapi dengan **Mutex-based Concurrency Protection** dan **Chunked Flow Control** untuk mencegah *buffer overflow* pada printer thermal ekonomis.
+> **Enterprise Edition (V3.0)**: Versi ini telah diperkuat (*hardened*) khusus untuk sistem POS dengan traffic tinggi. Dilengkapi dengan **Real-time Status Monitoring**, **Advanced Image Scaling**, dan **iOS Native Network framework** support.
 
 ---
 
@@ -29,9 +29,9 @@ KmpPrinter adalah library pencetakan thermal ESC/POS kelas industri dengan perfo
 
 ## 💎 Fitur Unggulan Industri
 
-- **🛡️ Stabilitas Hardened (V2.1)**: Mekanisme `Mutex` internal mencegah kerusakan data saat ada banyak proses cetak bersamaan. Fitur `Chunked Sending` otomatis memastikan keandalan pada printer bluetooth murah.
+- **🛡️ Stabilitas Hardened (V2.0)**: Mekanisme `Mutex` internal mencegah kerusakan data saat ada banyak proses cetak bersamaan. Fitur `Chunked Sending` otomatis memastikan keandalan pada printer bluetooth murah.
 - **🚀 Ultra-Fast Image Engine**: Algoritma dithering yang dioptimalkan (**Floyd-Steinberg & Atkinson**) menggunakan aritmatika *integer fixed-point* untuk penggunaan RAM minimal dan kecepatan maksimal.
-- **🖼️ Dukungan PDF & Vektor**: Utilitas bawaan untuk merender PDF atau SVG langsung ke data raster yang dioptimalkan untuk thermal.
+- **📊 Real-time Monitoring**: Deteksi status hardware printer secara akurat (Paper Out, Cover Open, Offline) di Android dan iOS.
 - **🌐 Web Support**: Dukungan penuh untuk WebBluetooth dan WebUSB pada target KMP WASM/JS.
 - **🎨 Visual Preview**: Blok pratinjau struk secara real-time untuk menunjukkan hasil cetak secara presisi di aplikasi.
 
@@ -39,14 +39,14 @@ KmpPrinter adalah library pencetakan thermal ESC/POS kelas industri dengan perfo
 
 ---
 
-## 📦 Instalasi (v1.0.3)
+## 📦 Instalasi (v3.0.0)
 
 👉 **[PANDUAN INSTALASI DETAIL](./INSTALLATION.md)**
 
 ### Cuplikan Cepat (Gradle KMP)
 ```kotlin
 // commonMain
-implementation("io.github.ringga-dev:kmp_printer:1.0.3")
+implementation("io.github.ringga-dev:kmp_printer:3.0.0")
 ```
 
 ---

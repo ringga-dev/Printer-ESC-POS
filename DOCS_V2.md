@@ -1,4 +1,4 @@
-# 💎 Dokumentasi Fitur Baru KmpPrinter-ESC-POS V2.1: Panduan Teknis Enterprise Edition
+# 💎 Dokumentasi Fitur Baru KmpPrinter-ESC-POS V2.0: Panduan Teknis Enterprise Edition
 
 Selamat datang di panduan definitif untuk pencetakan thermal Kotlin Multiplatform kelas industri.
 

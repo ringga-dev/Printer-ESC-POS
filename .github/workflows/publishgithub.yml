@@ -1,17 +1,17 @@
-name: Unified Library Publishing (Maven & Releases)
+name: Unified Library Publishing (GitHub Releases & Manual Maven Bundle)
 
 on:
   push:
     branches:
       - master
     tags:
-      - 'v*'  # Trigger on tags for official releases
+      - 'v*'
 
 permissions:
   contents: write
 
 jobs:
-  # 0. Check & Lint (Quality Gate)
+  # 0. Check & Lint
   check:
     name: Test & Lint
     runs-on: ubuntu-latest
@@ -36,11 +36,10 @@ jobs:
       lib_version: ${{ steps.get_version.outputs.LIB_VERSION }}
     steps:
       - uses: actions/checkout@v4
-      - name: Get Version from properties (with trimming)
+      - name: Get Version from properties
         id: get_version
         run: |
-          # Menggunakan xargs untuk menghapus spasi di awal/akhir
-          VERSION=$(grep 'LIB_VERSION=' gradle.properties | cut -d'=' -f2 | xargs)
+          VERSION=$(grep 'LIB_VERSION=' gradle.properties | cut -d'=' -f2 | tr -d '\r' | xargs)
           echo "LIB_VERSION=$VERSION" >> $GITHUB_OUTPUT
 
   # 2. Build Android AAR
@@ -91,7 +90,7 @@ jobs:
           name: kmp_printer-xcframework
           path: KmpPrinter.xcframework.zip
 
-  # 4. Build JVM JAR (Desktop)
+  # 4. Build JVM JAR
   build-jvm:
     name: Build JVM
     needs: setup
@@ -113,9 +112,9 @@ jobs:
           name: kmp_printer-jvm
           path: printer/build/libs/printer-jvm-*.jar
 
-  # 6. Sonatype Central Channel: Automated Publishing
-  publish-sonatype:
-    name: Publish to Maven Central
+  # 6. Prepare Manual Maven Bundle (No Auto-Upload)
+  prepare-maven-bundle:
+    name: Prepare Maven Bundle
     needs: setup
     runs-on: macos-latest
     steps:
@@ -130,7 +129,7 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       
-      - name: Publish to Local Folder
+      - name: Generate Local Repo
         env:
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
           GPG_PASSWORD: ${{ secrets.GPG_PASSWORD }}
@@ -145,43 +144,17 @@ jobs:
           zip -r -X "../../../$BUNDLE_NAME" .
           zip -d "../../../$BUNDLE_NAME" "__MACOSX*" "*.DS_Store*" || true
       
-      - name: Verify Bundle Contents (Diagnosa)
-        run: |
-          BUNDLE_NAME="sonatype-bundle-${{ needs.setup.outputs.lib_version }}.zip"
-          echo "Listing contents of $BUNDLE_NAME to verify .asc files..."
-          unzip -l "$BUNDLE_NAME"
-
-      - name: Archive Sonatype Bundle (Safety First)
+      - name: Archive Sonatype Bundle
         uses: actions/upload-artifact@v4
         with:
           name: sonatype-central-bundle
           path: sonatype-bundle-${{ needs.setup.outputs.lib_version }}.zip
 
-      - name: Upload to Sonatype Central Portal (Official API v1)
-        run: |
-          BUNDLE_NAME="sonatype-bundle-${{ needs.setup.outputs.lib_version }}.zip"
-          
-          # Step 1: Generate Base64 token safely (with trimming)
-          CLEAN_USER=$(printf "%s" "${{ secrets.MAVEN_USERNAME }}" | xargs)
-          CLEAN_PASS=$(printf "%s" "${{ secrets.MAVEN_PASSWORD }}" | xargs)
-          AUTH_TOKEN=$(printf "%s:%s" "$CLEAN_USER" "$CLEAN_PASS" | base64 | tr -d '\n')
-          
-          # Step 2: Upload using OFFICIAL Query Parameter format
-          DEPLOY_URL="https://central.sonatype.com/api/v1/publisher/upload?name=KmpPrinter-${{ needs.setup.outputs.lib_version }}&publishingType=USER_MANAGED"
-          
-          RESPONSE=$(curl --verbose --fail \
-            --header "Authorization: Bearer $AUTH_TOKEN" \
-            --form "bundle=@$BUNDLE_NAME" \
-            "$DEPLOY_URL")
-          
-          echo "Response from Sonatype: $RESPONSE"
-
-  # 7. Final: Create GitHub Release
+  # 7. Create GitHub Release (The Main Integration Point)
   create-release:
     name: Create GitHub Release
-    needs: [setup, build-android, build-ios, build-jvm, publish-sonatype]
+    needs: [setup, build-android, build-ios, build-jvm, prepare-maven-bundle]
     runs-on: ubuntu-latest
-    if: always() && needs.setup.result == 'success' && needs.build-android.result == 'success' && needs.build-ios.result == 'success' && needs.build-jvm.result == 'success'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -205,12 +178,24 @@ jobs:
             
             KmpPrinter: Professional Kotlin Multiplatform Thermal Printing Library for ESC/POS.
 
-            ### 🌍 Integration (Maven Central)
+            ### 🌍 Integration (GitHub Maven / JitPack)
+            To use this library in your project, add the JitPack repository:
             ```kotlin
-            implementation("io.github.ringga-dev:kmp_printer:${{ needs.setup.outputs.lib_version }}")
+            repositories {
+                maven { url = uri("https://jitpack.io") }
+            }
             ```
-            
-            *Note: Sonatype bundle is attached for manual release if automated publishing is still processing.*
+            Then add the dependency:
+            ```kotlin
+            dependencies {
+                implementation("com.github.ringga-dev:Printer-ESC-POS:v${{ needs.setup.outputs.lib_version }}")
+            }
+            ```
+
+            ### 📦 Manual Assets
+            - **Android**: `printer-release.aar`
+            - **iOS**: `KmpPrinter.xcframework.zip`
+            - **Maven Bundle**: `sonatype-bundle-${{ needs.setup.outputs.lib_version }}.zip` (For manual Sonatype upload)
           draft: false
           prerelease: false
           make_latest: true

@@ -139,17 +139,18 @@ jobs:
       - name: Create Sonatype Bundle
         run: |
           cd printer/build/repo
-          # -X to exclude MacOS extra attributes, -r for recursive
           zip -r -X ../../../sonatype-bundle.zip .
-          # Double check and remove any hidden trash if zip -X missed it
           zip -d ../../../sonatype-bundle.zip "__MACOSX*" "*.DS_Store*" || true
       
       - name: Upload to Sonatype Central Portal
         run: |
+          # Ditambahkan 'name' dan 'publishingType' untuk menghindari Error 500
           RESPONSE=$(curl --verbose \
             --request POST \
             --user "${{ secrets.MAVEN_USERNAME }}:${{ secrets.MAVEN_PASSWORD }}" \
             --form "bundle=@sonatype-bundle.zip" \
+            --form "name=KmpPrinter-${{ needs.setup.outputs.lib_version }}" \
+            --form "publishingType=USER_MANAGED" \
             --fail \
             https://central.sonatype.com/api/v1/publisher/deployments)
           echo "Response from Sonatype: $RESPONSE"
@@ -191,15 +192,6 @@ jobs:
             KmpPrinter: Professional Kotlin Multiplatform Thermal Printing Library for ESC/POS. 
             Generated automatically from `master`.
 
-            ### 🛠️ Integration (GitHub Maven)
-            ```kotlin
-            maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }
-            ```
-            
-            ```kotlin
-            implementation("io.github.ringga-dev:kmp_printer:${{ needs.setup.outputs.lib_version }}")
-            ```
-            
             ### 🌍 Integration (Maven Central)
             ```kotlin
             implementation("io.github.ringga-dev:kmp_printer:${{ needs.setup.outputs.lib_version }}")

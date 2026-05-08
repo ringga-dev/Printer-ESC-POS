@@ -116,7 +116,7 @@ jobs:
   publish-sonatype:
     name: Publish to Maven Central
     needs: setup
-    runs-on: macos-latest # Required for iOS targets to be signed/published correctly
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -134,7 +134,8 @@ jobs:
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
           GPG_PASSWORD: ${{ secrets.GPG_PASSWORD }}
         run: |
-          ./gradlew clean :printer:publishAllPublicationsToLocalRepoRepository --no-daemon --no-configuration-cache
+          ./gradlew clean --no-daemon
+          ./gradlew :printer:publishAllPublicationsToLocalRepoRepository --no-daemon --no-configuration-cache
       
       - name: Create Sonatype Bundle
         run: |
@@ -142,9 +143,13 @@ jobs:
           zip -r -X ../../../sonatype-bundle.zip .
           zip -d ../../../sonatype-bundle.zip "__MACOSX*" "*.DS_Store*" || true
       
+      - name: Verify Bundle Contents (Diagnosa)
+        run: |
+          echo "Listing contents of sonatype-bundle.zip to verify .asc files..."
+          unzip -l sonatype-bundle.zip
+
       - name: Upload to Sonatype Central Portal
         run: |
-          # Ditambahkan 'name' dan 'publishingType' untuk menghindari Error 500
           RESPONSE=$(curl --verbose \
             --request POST \
             --user "${{ secrets.MAVEN_USERNAME }}:${{ secrets.MAVEN_PASSWORD }}" \
@@ -161,7 +166,7 @@ jobs:
           name: sonatype-central-bundle
           path: sonatype-bundle.zip
 
-  # 7. Final: Create GitHub Release (COMPLETELY AUTOMATIC)
+  # 7. Final: Create GitHub Release
   create-release:
     name: Create GitHub Release
     needs: [setup, build-android, build-ios, build-jvm, publish-sonatype]
@@ -170,12 +175,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: release_artifacts
-
       - name: Auto-Tag and Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -188,11 +191,7 @@ jobs:
             release_artifacts/sonatype-central-bundle/*
           body: |
             ## 🚀 KmpPrinter v${{ needs.setup.outputs.lib_version }}
-            
-            KmpPrinter: Professional Kotlin Multiplatform Thermal Printing Library for ESC/POS. 
-            Generated automatically from `master`.
-
-            ### 🌍 Integration (Maven Central)
+            🌍 Integration (Maven Central)
             ```kotlin
             implementation("io.github.ringga-dev:kmp_printer:${{ needs.setup.outputs.lib_version }}")
             ```

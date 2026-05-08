@@ -13,12 +13,13 @@ import ngga.ring.printer.model.PrinterConfig
 /**
  * Android Implementation for USB OTG Printing.
  */
-class AndroidUsbConnector : PrinterConnector {
+class AndroidUsbConnector : BasePrinterConnector() {
     private var usbManager: UsbManager? = null
     private var usbDevice: UsbDevice? = null
     private var usbConnection: UsbDeviceConnection? = null
     private var usbInterface: UsbInterface? = null
-    private var usbEndpoint: UsbEndpoint? = null
+    private var usbEndpointOut: UsbEndpoint? = null
+    private var usbEndpointIn: UsbEndpoint? = null
 
     private val ACTION_USB_PERMISSION = "ngga.ring.printer.USB_PERMISSION"
 
@@ -48,11 +49,9 @@ class AndroidUsbConnector : PrinterConnector {
         if (usbManager?.hasPermission(device) == true) {
             openDevice(device)
         } else {
-            // Request permission (Note: This is asynchronous and usually requires a receiver)
-            // For now, we return false and assume the caller will handle permission 
-            // OR we wait for permission.
+            // Request permission
             requestUsbPermission(context, device)
-            false // Return false because permission is pending
+            false 
         }
     }
 
@@ -70,20 +69,33 @@ class AndroidUsbConnector : PrinterConnector {
             .find { it.interfaceClass == UsbConstants.USB_CLASS_PRINTER }
             ?: device.getInterface(0)
 
-        usbEndpoint = (0 until (usbInterface?.endpointCount ?: 0))
+        usbEndpointOut = (0 until (usbInterface?.endpointCount ?: 0))
             .map { usbInterface?.getEndpoint(it) }
             .find { it?.direction == UsbConstants.USB_DIR_OUT }
+
+        usbEndpointIn = (0 until (usbInterface?.endpointCount ?: 0))
+            .map { usbInterface?.getEndpoint(it) }
+            .find { it?.direction == UsbConstants.USB_DIR_IN }
 
         usbConnection = usbManager?.openDevice(device)
         return usbConnection?.claimInterface(usbInterface, true) ?: false
     }
 
-    override suspend fun sendData(data: ByteArray): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun sendRawData(data: ByteArray): Boolean = withContext(Dispatchers.IO) {
         val connection = usbConnection ?: return@withContext false
-        val endpoint = usbEndpoint ?: return@withContext false
+        val endpoint = usbEndpointOut ?: return@withContext false
         
         val result = connection.bulkTransfer(endpoint, data, data.size, 5000)
         result >= 0
+    }
+
+    override suspend fun readData(count: Int, timeout: Long): ByteArray? = withContext(Dispatchers.IO) {
+        val connection = usbConnection ?: return@withContext null
+        val endpoint = usbEndpointIn ?: return@withContext null
+        
+        val buffer = ByteArray(count)
+        val result = connection.bulkTransfer(endpoint, buffer, count, timeout.toInt())
+        if (result > 0) buffer.copyOf(result) else null
     }
 
     override suspend fun disconnect() = withContext(Dispatchers.IO) {
@@ -91,7 +103,8 @@ class AndroidUsbConnector : PrinterConnector {
         usbConnection?.close()
         usbConnection = null
         usbInterface = null
-        usbEndpoint = null
+        usbEndpointOut = null
+        usbEndpointIn = null
         usbDevice = null
     }
 

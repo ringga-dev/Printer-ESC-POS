@@ -7,11 +7,13 @@ import ngga.ring.printer.model.PrinterConfig
  * Virtual Printer Emulator for Unit Testing and Debugging.
  * Redirects ESC/POS commands to console log.
  */
-class VirtualPrinterConnector : PrinterConnector {
+class VirtualPrinterConnector : BasePrinterConnector() {
     private var connected = false
+    private val printHistory = mutableListOf<String>()
+    
+    // State
     private var isBold = false
     private var isUnderline = false
-    private var isInverted = false
     private var alignment = "LEFT"
 
     override suspend fun connect(config: PrinterConfig): Boolean {
@@ -20,90 +22,69 @@ class VirtualPrinterConnector : PrinterConnector {
         return true
     }
 
-    override suspend fun sendData(data: ByteArray): Boolean {
+    override suspend fun sendRawData(data: ByteArray): Boolean {
         if (!connected) return false
 
-        Napier.d("┌──────────────────────────────────────────┐")
-        Napier.d("│             VIRTUAL RECEIPT              │")
-        Napier.d("├──────────────────────────────────────────┤")
-
-        var line = StringBuilder("│ ")
         var i = 0
+        var currentLine = StringBuilder()
+        
         while (i < data.size) {
             val b = data[i].toInt() and 0xFF
             
-            // Look for commands
-            if (b == 0x1B) {
-                if (i + 1 < data.size) {
-                    val next = data[i + 1].toInt() and 0xFF
-                    when (next) {
-                        0x45 -> { // Bold
-                            isBold = (data[i + 2].toInt() == 1)
-                            i += 3; continue
-                        }
-                        0x2D -> { // Underline
-                            isUnderline = (data[i + 2].toInt() == 1)
-                            i += 3; continue
-                        }
-                        0x61 -> { // Alignment
-                            alignment = when (data[i + 2].toInt()) {
+            when (b) {
+                0x0A -> { // LF
+                    val stylePrefix = if (isBold) "[B] " else ""
+                    val alignPrefix = when (alignment) {
+                        "CENTER" -> "   [C]   "
+                        "RIGHT" -> "         [R] "
+                        else -> ""
+                    }
+                    val text = "$alignPrefix$stylePrefix${currentLine}"
+                    printHistory.add(text)
+                    Napier.d("Virtual: |$text|")
+                    currentLine = StringBuilder()
+                }
+                0x1B -> { // ESC
+                    if (i + 1 < data.size) {
+                        val next = data[++i].toInt() and 0xFF
+                        when (next) {
+                            0x45 -> isBold = (data[++i].toInt() == 1)
+                            0x61 -> alignment = when (data[++i].toInt()) {
                                 1 -> "CENTER"
                                 2 -> "RIGHT"
                                 else -> "LEFT"
                             }
-                            i += 3; continue
-                        }
-                        0x40 -> { // Initialize
-                            isBold = false; isUnderline = false; isInverted = false; alignment = "LEFT"
-                            i += 2; continue
+                            0x40 -> { isBold = false; alignment = "LEFT" }
                         }
                     }
                 }
-            } else if (b == 0x1D) {
-                if (i + 1 < data.size) {
-                    val next = data[i + 1].toInt() and 0xFF
-                    when (next) {
-                        0x42 -> { // Invert
-                            isInverted = (data[i + 2].toInt() == 1)
-                            i += 3; continue
+                0x1D -> { // GS
+                     if (i + 1 < data.size) {
+                        val next = data[++i].toInt() and 0xFF
+                        if (next == 0x76 && i + 1 < data.size && data[i+1] == 0x30.toByte()) { // GS v 0 (Image)
+                             // Skip image data for now but log dimensions
+                             i += 6 // Skip xL xH yL yH
+                             currentLine.append("[IMAGE]")
                         }
-                    }
-                }
-            }
-
-            when (b) {
-                0x0A -> {
-                    val currentText = line.toString()
-                    val padding = 43 - currentText.length
-                    if (padding > 0) line.append(" ".repeat(padding))
-                    line.append("│")
-                    Napier.d(line.toString())
-                    line = StringBuilder("│ ")
+                     }
                 }
                 in 0x20..0x7E -> {
-                    // Prefix with style markers if state changed
-                    val char = b.toChar()
-                    line.append(char)
-                    if (line.length >= 40) {
-                        line.append(" │")
-                        Napier.d(line.toString())
-                        line = StringBuilder("│ ")
-                    }
+                    currentLine.append(b.toChar())
                 }
             }
             i++
         }
-        
-        if (line.length > 2) {
-            val currentText = line.toString()
-            val padding = 43 - currentText.length
-            if (padding > 0) line.append(" ".repeat(padding))
-            line.append("│")
-            Napier.d(line.toString())
-        }
-        
-        Napier.d("└──────────────────────────────────────────┘")
         return true
+    }
+
+    /**
+     * Specialized function for the visual simulator to get the raw "paper" content.
+     */
+    fun getVirtualPaper(): List<String> = printHistory.toList()
+
+    override suspend fun readData(count: Int, timeout: Long): ByteArray? {
+        // Return a mock byte (e.g. 0x12 -> Online, Paper OK) for simulation
+        return byteArrayOf(0x12)
     }
 
     override suspend fun disconnect() {

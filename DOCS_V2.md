@@ -1,41 +1,116 @@
-# 💎 Dokumentasi Fitur Baru KmpPrinter V2.0
+# 💎 Dokumentasi Fitur Baru KmpPrinter-ESC-POS V2.0: Panduan Teknis Enterprise Edition
 
-Selamat datang di KmpPrinter V2.0! Versi ini memperkenalkan banyak fitur tingkat lanjut untuk kebutuhan cetak profesional dan pengembangan lintas platform (KMP).
+Selamat datang di panduan definitif untuk pencetakan thermal Kotlin Multiplatform kelas industri.
+
+## 📊 Matriks Fitur Platform
+
+| Fitur | Android | iOS | Desktop (JVM) | Web (WASM) |
+| :--- | :---: | :---: | :---: | :---: |
+| **Konektivitas** | | | | |
+| - Bluetooth (Classic) | ✅ | ❌ | ❌ | ✅ |
+| - Bluetooth LE (BLE) | ✅ | ✅ | ❌ | ✅ |
+| - USB OTG / Direct | ✅ | ❌ | ✅ | ✅ |
+| - Network (TCP) | ✅ | ✅ | ✅ | ✅ |
+| **Hardening** | | | | |
+| - Mutex Locking | ✅ | ✅ | ✅ | ✅ |
+| - Chunked Sending | ✅ | ✅ | ✅ | ✅ |
+| **Advanced Imaging** | | | | |
+| - Floyd-Steinberg | ✅ | ✅ | ✅ | ✅ |
+| - Atkinson Dithering | ✅ | ✅ | ✅ | ✅ |
+| - Image Rotation | ✅ | ✅ | ✅ | ✅ |
+| **Formatting** | | | | |
+| - Hardware QR/Barcode| ✅ | ✅ | ✅ | ✅ |
+| - Page Mode (XY) | ✅ | ✅ | ✅ | ✅ |
+| - PDF/Native Render | ✅ | ⏳ | ✅ | ⏳ |
 
 ---
 
-## 🚀 1. Native Barcode & QR Engine
-Alih-alih merender barcode sebagai gambar (yang seringkali pecah), V2.0 menggunakan perintah hardware asli.
-*   **Barcode (Code 128)**: Responsif dan tajam.
-*   **QR Code**: Mengikuti standar 5-langkah hardware (`GS ( k`) yang didukung printer modern.
+## 🛡️ Enterprise Hardening (V2.1)
+
+Dalam lingkungan retail dengan trafik tinggi, stabilitas hardware adalah segalanya. V2.1 memperkenalkan dua mekanisme stabilitas inti:
+
+### 1. Mutex-based Concurrency Protection
+Semua konektor kini mewarisi `BasePrinterConnector`, yang mengimplementasikan **Mutex** terpusat.
+- **Manfaat**: Jika beberapa coroutine mencoba mencetak secara bersamaan, library akan memasukkannya ke antrean secara otomatis. Tidak ada lagi data yang rusak atau error "Printer Busy".
+
+### 2. Chunked Flow Control
+Printer thermal murah seringkali memiliki buffer penerima yang sangat kecil. Mengirim gambar besar bisa menyebabkan printer "hang".
+- **Mekanisme**: Data dikirim dalam **chunk 512-byte** dengan jeda singkat **20ms** di antaranya.
+- **Manfaat**: Meningkatkan keandalan secara drastis pada printer Bluetooth ekonomis.
+
+---
+
+## 🚀 Cara Menggunakan (Contoh Kode)
+
+### 1. Integrasi Satu Baris (Printer DSL)
+Gunakan ekstensi `print` untuk pengalaman pengembangan terbaik.
 
 ```kotlin
-builder.barcode("KMP-V2-2026")
-       .qrCodeNative("https://github.com/ringga-dev", size = 8, center = true)
-```
+// Android, iOS, atau JVM
+val printer = KmpPrinter() 
+val config = PrinterConfig(...)
 
-## 🔌 2. Android USB OTG Support
-Sekarang Anda bisa mencetak langsung menggunakan kabel USB tanpa perlu Bluetooth.
-*   **Auto-Detection**: Mendeteksi printer USB yang terpasang di smartphone/tablet.
-*   **Reliability**: Pengiriman data lebih stabil dan cepat dibanding nirkabel.
-
-## 🖼️ 3. Logical Preview Engine (New!)
-Fitur ini memungkinkan Anda menampilkan "Bayangan" struk di aplikasi sebelum benar-benar mencetaknya.
-*   **PreviewBlock**: Daftar objek (Teks, Barcode, QR) yang mewakili isi struk.
-*   **Flexible Rendering**: Anda bisa menggambar preview ini menggunakan Jetpack Compose, SwiftUI, atau teks biasa.
-
-```kotlin
-// Ambil daftar blok untuk preview UI
-val previewBlocks = builder.buildPreview()
-
-// Gunakan di UI
-previewBlocks.forEach { block ->
-    when(block) {
-        is PreviewBlock.Text -> MyTextComponent(block)
-        is PreviewBlock.QRCode -> MyQRComponent(block)
-    }
+printer.print(config) {
+    initialize()
+    alignCenter()
+    text("Hello Enterprise")
+    line("V2.1 Hardened")
+    feed(3)
+    cut()
 }
 ```
+
+### 2. Pemrosesan Gambar Lanjutan
+Kualitas logo lebih baik dengan algoritma dithering berperforma tinggi.
+
+```kotlin
+printer.print(config) {
+    imageAdvanced(
+        pixels = logoPixels,
+        width = 384,
+        height = 200,
+        dithering = "FLOYD" // Opsi: "THRESHOLD", "FLOYD", "ATKINSON"
+    )
+}
+```
+
+### 3. Page Mode (XY Positioning)
+Untuk tata letak kompleks di mana pendekatan baris-demi-baris tidak mencukupi.
+
+```kotlin
+builder.enterPageMode()
+    .setPagePrintArea(0, 0, 384, 500)
+    .setAbsoluteHorizontalPosition(100)
+    .text("Koordinat X=100")
+    .setPageVerticalPosition(50)
+    .text("Koordinat Y=50")
+    .printPageAndReturn()
+```
+
+### 4. Pencetakan PDF Langsung (Android/JVM Saja)
+```kotlin
+val pdfData: ByteArray = ... 
+printer.printPdf(config, pdfData)
+```
+
+---
+
+## 🔧 Implementasi Konektor Kustom
+Jika Anda memiliki hardware khusus, Anda dapat membuat konektor sendiri dengan mewarisi `BasePrinterConnector`:
+
+```kotlin
+class MySpecialConnector : BasePrinterConnector() {
+    override suspend fun connect(config: PrinterConfig): Boolean = ...
+    override suspend fun sendRawData(data: ByteArray): Boolean = ...
+    override suspend fun readData(count: Int, timeout: Long): ByteArray? = ...
+    override suspend fun disconnect() = ...
+    override fun isConnected(): Boolean = ...
+}
+```
+
+---
+
+*Untuk langkah instalasi detail, lihat [INSTALLATION.md](./INSTALLATION.md).*
 
 ## ⚖️ 4. Auto-Centering & Margins
 Kalibrasi struk kini jauh lebih mudah.

@@ -34,6 +34,16 @@ kotlin {
     }
 
     jvm()
+
+    wasmJs {
+        browser()
+        binaries.executable()
+    }
+
+    js(IR) {
+        browser()
+        binaries.executable()
+    }
     
     targets.all {
         compilations.all {
@@ -59,6 +69,11 @@ kotlin {
             implementation("com.fazecast:jSerialComm:2.11.0")
             implementation("net.java.dev.jna:jna:5.14.0")
             implementation("net.java.dev.jna:jna-platform:5.14.0")
+            implementation("org.apache.pdfbox:pdfbox:3.0.1")
+        }
+
+        commonTest.dependencies {
+            implementation(kotlin("test"))
         }
     }
 }

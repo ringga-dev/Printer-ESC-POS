@@ -2,13 +2,8 @@ package ngga.ring.printer
 
 import ngga.ring.printer.model.*
 import ngga.ring.printer.util.ConnectionState
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.flow
-import ngga.ring.printer.manager.PrinterConnector
-import ngga.ring.printer.manager.PrinterConnectorFactory
+import kotlinx.coroutines.flow.*
+import ngga.ring.printer.manager.*
 import ngga.ring.printer.manager.PrinterPermissionManager
 import ngga.ring.printer.util.escpos.ESCPosCommandBuilder
 
@@ -85,7 +80,7 @@ class KmpPrinter {
         emit(PrintStatus.Processing)
         
         // Delegate to printRaw and collect its emissions
-        printRaw(config, data).collect { status ->
+        printRaw(config, data).collect { status: PrintStatus ->
             emit(status)
         }
     }
@@ -147,9 +142,61 @@ class KmpPrinter {
         emit(PrintStatus.Processing)
         val bytes = receiptService.generateTestPrint(config)
         
-        printRaw(config, bytes).collect { status ->
+        printRaw(config, bytes).collect { status: PrintStatus ->
             emit(status)
         }
+    }
+
+    /**
+     * Prints using a DSL-style builder.
+     * Handles connection and data sending automatically.
+     */
+    suspend fun print(
+        config: PrinterConfig,
+        block: ESCPosCommandBuilder.() -> Unit
+    ): Flow<PrintStatus> = flow {
+        emit(PrintStatus.Processing)
+        val builder = newCommandBuilder(config).initialize()
+        builder.block()
+        
+        printRaw(config, builder.build()).collect { status: PrintStatus ->
+            emit(status)
+        }
+    }
+
+    /**
+     * Real-time status monitor instance.
+     */
+    private val statusMonitor = PrinterStatusMonitor()
+
+    /**
+     * Monitors the real-time status of the connected printer.
+     * Emits PrinterStatus updates (online, paper out, cover open, etc.).
+     *
+     * @param config The printer configuration.
+     * @param intervalMs Polling interval in milliseconds (default 2000ms).
+     */
+    fun monitorStatus(
+        config: PrinterConfig,
+        intervalMs: Long = 2000
+    ): Flow<PrinterStatus> = flow {
+        val connector = activeConnector
+        if (connector == null || !connector.isConnected()) {
+            emit(PrinterStatus(isOnline = false))
+            return@flow
+        }
+        statusMonitor.monitor(connector, intervalMs).collect { status: PrinterStatus ->
+            emit(status)
+        }
+    }
+
+    /**
+     * Queries the printer status once.
+     */
+    suspend fun queryStatus(): PrinterStatus {
+        val connector = activeConnector ?: return PrinterStatus(isOnline = false)
+        if (!connector.isConnected()) return PrinterStatus(isOnline = false)
+        return statusMonitor.queryStatus(connector)
     }
 
     /**

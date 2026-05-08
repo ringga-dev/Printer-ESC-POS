@@ -1,41 +1,116 @@
-# 💎 KmpPrinter V2.0 新功能文档
+# Printer-ESC-POS V2.1: 企业级版本深度探索
 
-欢迎使用 KmpPrinter V2.0！此版本引入了多项高级功能，专为专业打印需求和跨平台 (KMP) 专家开发设计。
+欢迎阅读工业级 Kotlin 多平台热敏打印权威指南。
+
+## 📊 平台功能矩阵
+
+| 功能 | Android | iOS | 桌面端 (JVM) | Web (WASM) |
+| :--- | :---: | :---: | :---: | :---: |
+| **连接方式** | | | | |
+| - 经典蓝牙 | ✅ | ❌ | ❌ | ✅ |
+| - 低功耗蓝牙 (BLE) | ✅ | ✅ | ❌ | ✅ |
+| - USB OTG / 直连 | ✅ | ❌ | ✅ | ✅ |
+| - 网络 (TCP) | ✅ | ✅ | ✅ | ✅ |
+| **加固特性** | | | | |
+| - 线程锁 (Mutex) | ✅ | ✅ | ✅ | ✅ |
+| - 分块发送 | ✅ | ✅ | ✅ | ✅ |
+| **高级图像处理** | | | | |
+| - Floyd-Steinberg | ✅ | ✅ | ✅ | ✅ |
+| - Atkinson 抖动 | ✅ | ✅ | ✅ | ✅ |
+| - 图像旋转 | ✅ | ✅ | ✅ | ✅ |
+| **格式化支持** | | | | |
+| - 硬件级条码/QR | ✅ | ✅ | ✅ | ✅ |
+| - 页面模式 (XY布局)| ✅ | ✅ | ✅ | ✅ |
+| - PDF/原生渲染 | ✅ | ⏳ | ✅ | ⏳ |
 
 ---
 
-## 🚀 1. 原生条码与二维码引擎
-不同于将条码渲染为低分辨率图像（通常会模糊），V2.0 使用原始硬件指令。
-*   **条码 (Code 128)**: 锐利、响应迅速且对比度高。
-*   **二维码**: 遵循现代热敏打印机支持的 5 步硬件序列 (`GS ( k`)。
+## 🛡️ 企业级加固 (V2.1)
+
+在高流量的零售环境中，硬件的稳定性至关重要。V2.1 引入了两大核心稳定性机制：
+
+### 1. 基于 Mutex 的并发保护
+所有连接器现在都继承自 `BasePrinterConnector`，它实现了一个集中的 **Mutex (互斥锁)**。
+- **优势**: 如果多个协程尝试同时打印，库会自动将它们排队处理。不再会出现数据损坏或“打印机繁忙”的错误。
+
+### 2. 分块传输控制 (Flow Control)
+廉价的热敏打印机通常接收缓冲区非常小。发送大图像可能会导致打印机卡死。
+- **机制**: 数据以 **512 字节分块** 发送，每块之间有 **20 毫秒** 的微小延迟。
+- **优势**: 显著提高了在入门级蓝牙打印机上的打印可靠性。
+
+---
+
+## 🚀 如何使用 (代码示例)
+
+### 1. 便捷的一行代码集成 (Printer DSL)
+使用 `print` 扩展函数以获得最佳的开发体验。
 
 ```kotlin
-builder.barcode("KMP-V2-2026")
-       .qrCodeNative("https://github.com/ringga-dev", size = 8, center = true)
-```
+// Android, iOS, 或 JVM
+val printer = KmpPrinter() 
+val config = PrinterConfig(...)
 
-## 🔌 2. Android USB OTG 支持
-您现在可以通过 USB 线直接打印，无需依赖蓝牙。
-*   **自动检测**: 扫描连接到智能手机/平板电脑的 USB 打印机。
-*   **可靠性**: 数据传输比无线协议更稳定、更快速。
-
-## 🖼️ 3. 逻辑预览引擎 (新增!)
-此功能允许您在实际打印之前在应用中显示小票的“镜像”。
-*   **PreviewBlock**: 代表内容的对象列表（文本、条码、二维码）。
-*   **灵活渲染**: 您可以使用 Jetpack Compose、SwiftUI 或纯文本绘制此预览。
-
-```kotlin
-// 获取 UI 预览的逻辑块
-val previewBlocks = builder.buildPreview()
-
-// 在 UI 中渲染
-previewBlocks.forEach { block ->
-    when(block) {
-        is PreviewBlock.Text -> MyTextComponent(block)
-        is PreviewBlock.QRCode -> MyQRComponent(block)
-    }
+printer.print(config) {
+    initialize()
+    alignCenter()
+    text("Hello Enterprise")
+    line("V2.1 加固版")
+    feed(3)
+    cut()
 }
 ```
+
+### 2. 高级图像处理
+使用高性能抖动算法获得更高质量的 Logo 打印效果。
+
+```kotlin
+printer.print(config) {
+    imageAdvanced(
+        pixels = logoPixels,
+        width = 384,
+        height = 200,
+        dithering = "FLOYD" // 选项: "THRESHOLD", "FLOYD", "ATKINSON"
+    )
+}
+```
+
+### 3. 页面模式 (XY 坐标定位)
+适用于复杂的布局，当逐行打印无法满足需求时使用。
+
+```kotlin
+builder.enterPageMode()
+    .setPagePrintArea(0, 0, 384, 500)
+    .setAbsoluteHorizontalPosition(100)
+    .text("坐标 X=100")
+    .setPageVerticalPosition(50)
+    .text("坐标 Y=50")
+    .printPageAndReturn()
+```
+
+### 4. 直接打印 PDF (仅限 Android/JVM)
+```kotlin
+val pdfData: ByteArray = ... 
+printer.printPdf(config, pdfData)
+```
+
+---
+
+## 🔧 自定义连接器实现
+如果您有特殊的硬件接口，可以通过扩展 `BasePrinterConnector` 来创建自定义连接器：
+
+```kotlin
+class MySpecialConnector : BasePrinterConnector() {
+    override suspend fun connect(config: PrinterConfig): Boolean = ...
+    override suspend fun sendRawData(data: ByteArray): Boolean = ...
+    override suspend fun readData(count: Int, timeout: Long): ByteArray? = ...
+    override suspend fun disconnect() = ...
+    override fun isConnected(): Boolean = ...
+}
+```
+
+---
+
+*如需查看详细的安装步骤，请参阅 [INSTALLATION_ZH.md](./INSTALLATION_ZH.md)。*
 
 ## ⚖️ 4. 自动居中与页边距
 票据校准现在变得更加容易。

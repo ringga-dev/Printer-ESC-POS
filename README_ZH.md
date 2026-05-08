@@ -1,81 +1,49 @@
-# 🖨️ KmpPrinter
-**专为专业人士打造的终极 Kotlin 多平台热敏打印套件。**
+# 🖨️ KmpPrinter (V2.1 企业级增强版)
+**面向专业人士的极致 Kotlin 多平台热敏打印套件。**
 
 **语言:** [Bahasa Indonesia](./README.md) | [English](./README_EN.md) | **简体中文**
 
 ![Build Status](https://github.com/ringga-dev/Printer-ESC-POS/actions/workflows/publishgithub.yml/badge.svg)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![KMP](https://img.shields.io/badge/Kotlin-Multiplatform-blue?logo=kotlin)](https://kotlinlang.org/docs/multiplatform.html)
-[![Release](https://img.shields.io/github/v/release/ringga-dev/Printer-ESC-POS?color=orange&logo=github)](https://github.com/ringga-dev/Printer-ESC-POS/releases)
 
 ---
 
-KmpPrinter 是一款高性能的 ESC/POS 热敏打印库，旨在轻松集成到 **Android、iOS 和 JVM (Desktop)**。 凭借统一的 **Connector Pattern** 架构，您可以使用一套标准代码控制各种品牌的热敏打印机（蓝牙、USB、网络）。
+KmpPrinter 是一款高性能、工业级的 ESC/POS 热敏打印库，专为 **Android, iOS, JVM (Desktop), 和 Web (WASM/JS)** 的无缝集成而设计。
 
 > [!IMPORTANT]
-> **生产就绪**: 该库通过 **Auto-Release CI/CD** 流水线提供支持。 每个版本的更新都经过稳定性保证，且二进制文件（`.aar`、`.jar`、`.xcframework`）始终可以在发布页面下载。
+> **企业版 (V2.1)**: 此版本专门针对高流量 POS 系统进行了加固。它包含 **基于线程锁 (Mutex) 的并发保护** 和 **分块传输控制 (Chunked Flow Control)**，以防止低端热敏打印机出现硬件缓冲区溢出。
 
 ---
 
-## 📋 规格与限制 (Requirements & Limitations)
+## 📋 平台连接支持情况
 
-### 最低规格
-为了确保最佳性能，请确认您的项目满足以下要求：
-- **Kotlin**: v2.3.20 或更高版本。
-- **Android**: API Level 24+ (Android 7.0 Nougat)。
-- **iOS**: iOS 13.0+ (arm64 架构)。
-- **JVM/Desktop**: Java 11 或更高版本。
-- **Gradle**: v8.0 或更高版本。
-
-### 已知限制
-- **协议**: 仅支持标准 **ESC/POS** 指令。
-- **iOS 连接性**: 仅支持蓝牙连接（取决于硬件的 BLE/Classic）。由于操作系统限制，iOS 上不支持直接 USB 连接。
-- **图像打印**: 使用 **位图栅格 (Raster Bit Image)** 模式（兼容性最佳，但高分辨率图像的数据量可能较大）。
-- **编码**: 默认为 UTF-8。标准 ASCII 以外的特殊字符取决于打印机固件支持的字库 (Code Page)。
+| 平台 | 经典蓝牙 | 低功耗蓝牙 (BLE) | USB (OTG) | 网络 (TCP) |
+| :--- | :---: | :---: | :---: | :---: |
+| **Android** | ✅ | ✅ | ✅ | ✅ |
+| **iOS** | ❌ | ✅ | ❌ | ✅ |
+| **JVM/Desktop**| ❌ | ❌ | ✅ | ✅ |
+| **Web (WASM)** | ✅ | ✅ | ✅ | ✅ |
 
 ---
 
-## 🚀 核心特性 (为什么选择 KmpPrinter?)
+## 💎 高级行业特性
 
-| 特性 | 说明 | 状态 |
-| :--- | :--- | :---: |
-| **KMP 统一** | 一套代码支持 Android, iOS, 和 Desktop。 | ✅ |
-| **原生条码/QR** | 基于硬件指令的高清 QR & 条码 (v2.0)。 | ✅ |
-| **USB OTG** | 支持 Android 平板的 USB 线联打印 (v2.0)。 | ✅ |
-| **实时预览** | 在 App 内动态预览小票样式 (v2.0)。 | ✅ |
-| **自动发现** | 基于网络的 IP 打印机自动扫描。 | ✅ |
-| **Floyd 抖动算法** | 以平滑的渐变色打印图像。 | ✅ |
+- **🛡️ 硬件级稳定性 (V2.1)**: 内置 `Mutex` 锁，防止并发打印任务导致的数据损坏。自动 `分块发送`（512 字节分块，20ms 延迟）确保在廉价蓝牙打印机上也能稳定运行。
+- **🚀 超快图像引擎**: 优化的抖动算法 (**Floyd-Steinberg & Atkinson**)，采用定点整数运算，不仅内存占用极低，且处理速度极快。
+- **🖼️ PDF 和矢量图支持**: 能够将 PDF 或 SVG 直接转换为热敏打印优化的位图数据。
+- **🌐 Web 平台支持**: 在 KMP WASM/JS 目标中完全支持 WebBluetooth 和 WebUSB。
+- **🎨 视觉预览**: 提供实时的收据预览块，确保应用内显示的预览与最终打印结果完全一致。
 
----
-
-## 💎 KmpPrinter V2.0 (新发布!)
-最新版本包含专为工业级 POS 实施设计的“专家级”功能。
-
-👉 **[浏览 V2.0 功能文档](./DOCS_V2_ZH.md)**
+👉 **[查看完整功能文档](./DOCS_V2_ZH.md)**
 
 ---
 
----
+## 📦 安装指南 (v1.0.3)
 
-## 📦 快速安装 (v1.0.3)
+👉 **[详细安装指南](./INSTALLATION_ZH.md)**
 
-如需查看最详尽、最专业的集成指南，请访问：
-
-👉 **[安装指南与 KMP 专家课程](./INSTALLATION_ZH.md)**
-
-### 快速代码片段 (Gradle KMP)
-1. **仓库设置**:
-```kotlin
-// settings.gradle.kts
-dependencyResolutionManagement {
-    repositories {
-        mavenCentral()
-        maven { url = uri("https://raw.githubusercontent.com/ringga-dev/Printer-ESC-POS/maven-repo") }
-    }
-}
-```
-
-2. **依赖配置**:
+### 快速集成 (Gradle KMP)
 ```kotlin
 // commonMain
 implementation("io.github.ringga-dev:kmp_printer:1.0.3")
@@ -83,18 +51,14 @@ implementation("io.github.ringga-dev:kmp_printer:1.0.3")
 
 ---
 
-## 🛠️ 快速使用示例
+## 🛠️ 高性能代码示例
+
+使用全新的 **Printer DSL** 构建清晰且易于维护的代码：
 
 ```kotlin
 val printer = KmpPrinter()
 val config = PrinterConfig(name = "MTP-II", connectionType = "BLUETOOTH", address = "00:11...")
 
-val commands = printer.newCommandBuilder(config)
-    .initialize()
-    .alignCenter()
-    .setBold(true)
-    .line("KMP PRINTER STORE")
-    .setBold(false)
     .divider()
     .tableRow(listOf("冰咖啡", "2x", "¥ 40.00"), listOf(2, 1, 1))
     .divider()

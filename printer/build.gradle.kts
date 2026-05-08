@@ -110,7 +110,7 @@ val kmpJavadocJar by tasks.registering(Jar::class) {
 publishing {
     publications {
         withType<MavenPublication> {
-            artifact(kmpSourcesJar)
+            // Add Javadoc JAR to all publications (required by Maven Central)
             artifact(kmpJavadocJar)
 
             pom {

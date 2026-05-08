@@ -103,31 +103,16 @@ val kmpSourcesJar by tasks.registering(Jar::class) {
     from(kotlin.sourceSets.getByName("commonMain").kotlin)
 }
 
-// Requirements for Maven Central: Javadoc Jar (using Dokka)
-tasks.named("dokkaHtml") {
-    // Temporarily disabled due to internal bug: "not array: KClass<out Annotation>"
-    // This is a known incompatibility in current Kotlin/Dokka versions.
-    enabled = false 
-}
-
 val kmpJavadocJar by tasks.registering(Jar::class) {
     archiveClassifier.set("javadoc")
-    // If dokkaHtml is disabled or fails, this JAR will just be empty
-    if (tasks.findByName("dokkaHtml")?.enabled == true) {
-        from(tasks.named("dokkaHtml"))
-    }
+    from(tasks.named("dokkaHtml"))
 }
 
 publishing {
     publications {
-        // The Multiplatform plugin automatically creates publications for each target.
-        // We just need to configure them to include standard pom metadata.
         withType<MavenPublication> {
-            // artifactId is handled by KMP automatically.
-            // groupId and version are already set at the top level
-            
-            // Note: KMP automatically handles sources JAR for most targets.
-            // If you need Javadoc, it should be configured specifically.
+            artifact(kmpSourcesJar)
+            artifact(kmpJavadocJar)
 
             pom {
                 name.set("KmpPrinter")
@@ -143,7 +128,7 @@ publishing {
                     developer {
                         id.set("ringga")
                         name.set("Ringga")
-                        email.set("ringga@dev.com")
+                        email.set("ringgadev@gmail.com")
                     }
                 }
                 scm {
@@ -157,15 +142,20 @@ publishing {
 
     repositories {
         maven {
-            name = "LocalRepo"
-            url = uri(layout.buildDirectory.dir("repo"))
+            name = "Sonatype"
+            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+            credentials {
+                username = System.getenv("MAVEN_USERNAME") ?: (project.findProperty("ossrhUsername") as? String)
+                password = System.getenv("MAVEN_PASSWORD") ?: (project.findProperty("ossrhPassword") as? String)
+            }
         }
     }
 }
 
 signing {
-    val signingKey = System.getenv("ORG_GRADLE_PROJECT_signingKey")
-    val signingPassword = System.getenv("ORG_GRADLE_PROJECT_signingPassword")
+    val signingKey = System.getenv("GPG_SIGNING_KEY") ?: (project.findProperty("signingKey") as? String)
+    val signingPassword = System.getenv("GPG_PASSWORD") ?: (project.findProperty("signingPassword") as? String)
+    
     if (signingKey != null && signingPassword != null) {
         useInMemoryPgpKeys(signingKey, signingPassword)
         sign(publishing.publications)

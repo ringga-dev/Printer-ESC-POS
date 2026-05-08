@@ -150,13 +150,19 @@ jobs:
           echo "Listing contents of $BUNDLE_NAME to verify .asc files..."
           unzip -l "$BUNDLE_NAME"
 
+      - name: Archive Sonatype Bundle (Safety First)
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonatype-central-bundle
+          path: sonatype-bundle-${{ needs.setup.outputs.lib_version }}.zip
+
       - name: Upload to Sonatype Central Portal (Official API v1)
         run: |
           BUNDLE_NAME="sonatype-bundle-${{ needs.setup.outputs.lib_version }}.zip"
           # Step 1: Generate Base64 token safely
           AUTH_TOKEN=$(printf "%s:%s" "${{ secrets.MAVEN_USERNAME }}" "${{ secrets.MAVEN_PASSWORD }}" | base64 | tr -d '\n')
           
-          # Step 2: Upload using OFFICIAL Query Parameter format with single quotes to avoid URL errors
+          # Step 2: Upload using OFFICIAL Query Parameter format
           RESPONSE=$(curl --verbose --fail \
             --header "Authorization: Bearer $AUTH_TOKEN" \
             --form "bundle=@$BUNDLE_NAME" \
@@ -164,16 +170,10 @@ jobs:
           
           echo "Response from Sonatype: $RESPONSE"
 
-      - name: Archive Sonatype Bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: sonatype-central-bundle
-          path: sonatype-bundle-${{ needs.setup.outputs.lib_version }}.zip
-
   # 7. Final: Create GitHub Release
   create-release:
     name: Create GitHub Release
-    needs: [setup, build-android, build-ios, build-jvm]
+    needs: [setup, build-android, build-ios, build-jvm, publish-sonatype]
     runs-on: ubuntu-latest
     if: always() && needs.setup.result == 'success' && needs.build-android.result == 'success' && needs.build-ios.result == 'success' && needs.build-jvm.result == 'success'
     steps:

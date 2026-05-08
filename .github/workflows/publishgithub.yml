@@ -150,10 +150,10 @@ jobs:
 
       - name: Upload to Sonatype Central Portal (Official API v1)
         run: |
-          # Step 1: Generate Base64 token from username:password
-          AUTH_TOKEN=$(echo -n "${{ secrets.MAVEN_USERNAME }}:${{ secrets.MAVEN_PASSWORD }}" | base64)
+          # Step 1: Generate Base64 token safely (strip newlines)
+          AUTH_TOKEN=$(printf "%s:%s" "${{ secrets.MAVEN_USERNAME }}" "${{ secrets.MAVEN_PASSWORD }}" | base64 | tr -d '\n')
           
-          # Step 2: Upload using official endpoint: /api/v1/publisher/upload
+          # Step 2: Upload using official endpoint
           RESPONSE=$(curl --verbose \
             --request POST \
             --header "Authorization: Bearer $AUTH_TOKEN" \
@@ -169,11 +169,12 @@ jobs:
           name: sonatype-central-bundle
           path: sonatype-bundle.zip
 
-  # 7. Final: Create GitHub Release
+  # 7. Final: Create GitHub Release (Runs as soon as builds are ready, ignores Maven failure)
   create-release:
     name: Create GitHub Release
-    needs: [setup, build-android, build-ios, build-jvm, publish-sonatype]
+    needs: [setup, build-android, build-ios, build-jvm]
     runs-on: ubuntu-latest
+    if: always() && needs.setup.result == 'success' && needs.build-android.result == 'success' && needs.build-ios.result == 'success' && needs.build-jvm.result == 'success'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -188,10 +189,10 @@ jobs:
           tag_name: v${{ needs.setup.outputs.lib_version }}
           name: "v${{ needs.setup.outputs.lib_version }}"
           files: |
-            release_artifacts/kmp_printer-aar/*
-            release_artifacts/kmp_printer-xcframework/*
-            release_artifacts/kmp_printer-jvm/*
-            release_artifacts/sonatype-central-bundle/*
+            release_artifacts/kmp_printer-aar/**/*
+            release_artifacts/kmp_printer-xcframework/**/*
+            release_artifacts/kmp_printer-jvm/**/*
+            release_artifacts/sonatype-central-bundle/**/*
           body: |
             ## 🚀 KmpPrinter v${{ needs.setup.outputs.lib_version }}
             🌍 Integration (Maven Central)

@@ -1,4 +1,4 @@
-name: Unified Library Publishing (GitHub Releases & Manual Maven Bundle)
+name: Unified Library Publishing (GitHub Maven & Releases)
 
 on:
   push:
@@ -112,13 +112,15 @@ jobs:
           name: kmp_printer-jvm
           path: printer/build/libs/printer-jvm-*.jar
 
-  # 6. Prepare Manual Maven Bundle (No Auto-Upload)
-  prepare-maven-bundle:
-    name: Prepare Maven Bundle
+  # 6. Deploy to GitHub Maven (maven-repo branch)
+  deploy-github-maven:
+    name: Deploy to GitHub Maven
     needs: setup
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: master
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -129,32 +131,43 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       
-      - name: Generate Local Repo
+      - name: Generate Maven Repo
         env:
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
           GPG_PASSWORD: ${{ secrets.GPG_PASSWORD }}
         run: |
           ./gradlew clean --no-daemon
-          ./gradlew :printer:publishAllPublicationsToLocalRepoRepository --no-daemon --no-configuration-cache
+          ./gradlew :printer:publishAllPublicationsToLocalRepoRepository --no-daemon
       
-      - name: Create Sonatype Bundle
+      - name: Create Manual Bundle for Sonatype
         run: |
           BUNDLE_NAME="sonatype-bundle-${{ needs.setup.outputs.lib_version }}.zip"
           cd printer/build/repo
           zip -r -X "../../../$BUNDLE_NAME" .
           zip -d "../../../$BUNDLE_NAME" "__MACOSX*" "*.DS_Store*" || true
       
-      - name: Archive Sonatype Bundle
+      - name: Deploy to maven-repo branch
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: maven-repo
+          folder: printer/build/repo
+          target-folder: .
+          clean: false # Penting: Jangan hapus versi lama
+          commit-message: "Publish v${{ needs.setup.outputs.lib_version }} to GitHub Maven"
+
+      - name: Upload Sonatype Bundle
         uses: actions/upload-artifact@v4
         with:
           name: sonatype-central-bundle
           path: sonatype-bundle-${{ needs.setup.outputs.lib_version }}.zip
 
-  # 7. Create GitHub Release (The Main Integration Point)
+  # 7. Create GitHub Release
   create-release:
     name: Create GitHub Release
-    needs: [setup, build-android, build-ios, build-jvm, prepare-maven-bundle]
+    needs: [setup, build-android, build-ios, build-jvm, deploy-github-maven]
     runs-on: ubuntu-latest
+    if: always() && needs.setup.result == 'success' && needs.build-android.result == 'success' && needs.build-ios.result == 'success' && needs.build-jvm.result == 'success'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -178,24 +191,25 @@ jobs:
             
             KmpPrinter: Professional Kotlin Multiplatform Thermal Printing Library for ESC/POS.
 
-            ### 🌍 Integration (GitHub Maven / JitPack)
-            To use this library in your project, add the JitPack repository:
+            🛠️ **Integrasi (GitHub Maven)**
+            Tambahkan repository di `settings.gradle.kts`:
             ```kotlin
             repositories {
-                maven { url = uri("https://jitpack.io") }
+                maven { url = uri("https://raw.githubusercontent.com/ringga-dev/kmp-printer/maven-repo") }
             }
             ```
-            Then add the dependency:
+            
+            Tambahkan dependency di modul Anda:
             ```kotlin
             dependencies {
-                implementation("com.github.ringga-dev:Printer-ESC-POS:v${{ needs.setup.outputs.lib_version }}")
+                implementation("io.github.ringga-dev:kmp_printer:${{ needs.setup.outputs.lib_version }}")
             }
             ```
 
-            ### 📦 Manual Assets
-            - **Android**: `printer-release.aar`
-            - **iOS**: `KmpPrinter.xcframework.zip`
-            - **Maven Bundle**: `sonatype-bundle-${{ needs.setup.outputs.lib_version }}.zip` (For manual Sonatype upload)
+            📦 **Compiled Assets**
+            - Android: `printer-release.aar`
+            - iOS: `KmpPrinter.xcframework.zip`
+            - Bundle: `sonatype-bundle-${{ needs.setup.outputs.lib_version }}.zip` (Manual Upload)
           draft: false
           prerelease: false
           make_latest: true

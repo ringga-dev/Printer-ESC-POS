@@ -109,7 +109,7 @@ publishing {
             pom {
                 name.set("KmpPrinter")
                 description.set("KmpPrinter: Professional Kotlin Multiplatform Thermal Printing Library for ESC/POS.")
-                url.set("https://github.com/ringga-dev/Printer-ESC-POS")
+                url.set("https://github.com/ringga-dev/kmp-printer")
                 licenses {
                     license {
                         name.set("MIT License")
@@ -124,9 +124,9 @@ publishing {
                     }
                 }
                 scm {
-                    connection.set("scm:git:git://github.com/ringga-dev/Printer-ESC-POS.git")
-                    developerConnection.set("scm:git:ssh://github.com/ringga-dev/Printer-ESC-POS.git")
-                    url.set("https://github.com/ringga-dev/Printer-ESC-POS")
+                    connection.set("scm:git:git://github.com/ringga-dev/kmp-printer.git")
+                    developerConnection.set("scm:git:ssh://github.com/ringga-dev/kmp-printer.git")
+                    url.set("https://github.com/ringga-dev/kmp-printer")
                 }
             }
         }

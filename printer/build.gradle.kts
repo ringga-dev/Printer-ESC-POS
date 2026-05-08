@@ -5,8 +5,6 @@ plugins {
     id("com.android.library")
     id("maven-publish")
     id("signing")
-    // Dokka for professional Javadoc required by Maven Central
-    id("org.jetbrains.dokka") version "1.9.20"
 }
 
 group = project.property("LIB_GROUP").toString()
@@ -103,9 +101,10 @@ val kmpSourcesJar by tasks.registering(Jar::class) {
     from(kotlin.sourceSets.getByName("commonMain").kotlin)
 }
 
+// Dummy Javadoc JAR to satisfy Maven Central requirements and avoid Dokka bugs
 val kmpJavadocJar by tasks.registering(Jar::class) {
     archiveClassifier.set("javadoc")
-    from(tasks.named("dokkaHtml"))
+    from(projectDir.resolve("README.md"))
 }
 
 publishing {

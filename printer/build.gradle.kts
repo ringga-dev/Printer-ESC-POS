@@ -141,6 +141,7 @@ publishing {
     }
 
     repositories {
+        // 1. Sonatype Central (Official Release)
         maven {
             name = "Sonatype"
             url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
@@ -148,6 +149,11 @@ publishing {
                 username = System.getenv("MAVEN_USERNAME") ?: (project.findProperty("ossrhUsername") as? String)
                 password = System.getenv("MAVEN_PASSWORD") ?: (project.findProperty("ossrhPassword") as? String)
             }
+        }
+        // 2. Local Repo for GitHub Maven Branch (maven-repo)
+        maven {
+            name = "LocalRepo"
+            url = uri(layout.buildDirectory.dir("repo"))
         }
     }
 }
